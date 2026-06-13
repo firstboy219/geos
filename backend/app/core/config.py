@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     # ── AI engine (Phase 5) — Gemini + Pinecone ──
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL_ANALYSIS: str = "gemini-2.0-flash"
+    GEMINI_MODEL_ANALYSIS: str = "gemini-2.5-flash"
     GEMINI_MODEL_EMBEDDING: str = "gemini-embedding-001"
     PINECONE_API_KEY: str = ""
     PINECONE_INDEX_NAME: str = "geoscan-historical"
