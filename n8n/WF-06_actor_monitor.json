@@ -1,0 +1,110 @@
+{
+  "name": "WF-06 — Actor Statement Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "hours", "hoursInterval": 2 } ] }
+      },
+      "id": "schedule",
+      "name": "Every 2 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ -680, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "http://geoscan-backend:8000/internal/actors/monitored",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "monitored",
+      "name": "Get monitored actors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -460, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per actor\nconst arr = Array.isArray($json) ? $json : ($json.data || []);\nreturn arr.map(a => ({ json: a }));"
+      },
+      "id": "split",
+      "name": "Split actors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ -240, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [
+          { "name": "q", "value": "=\"{{ $json.full_name }}\" (statement OR speech OR says)" },
+          { "name": "sortBy", "value": "publishedAt" },
+          { "name": "pageSize", "value": "5" }
+        ] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "search",
+      "name": "NewsAPI search per actor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -20, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_NEWSAPI", "name": "newsApiKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a statement payload from the latest article, if any\nconst actor = $('Split actors').item.json;\nconst arts = $json.articles || [];\nif (!arts.length) return [];\nconst a = arts[0];\nreturn [{ json: {\n  actor_id: actor.actor_id,\n  statement_text: ((a.title || '') + '. ' + (a.description || '')).trim(),\n  source_url: a.url,\n  published_at: a.publishedAt || new Date().toISOString()\n}}];"
+      },
+      "id": "build",
+      "name": "Build statement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 200, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/actors/statement",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "post",
+      "name": "POST /internal/actors/statement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 420, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=🗣️ Actor monitor: {{ $json.actor_id }} statement diperbarui",
+        "additionalFields": {}
+      },
+      "id": "tg",
+      "name": "Telegram log",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 640, 300 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "Every 2 hours": { "main": [ [ { "node": "Get monitored actors", "type": "main", "index": 0 } ] ] },
+    "Get monitored actors": { "main": [ [ { "node": "Split actors", "type": "main", "index": 0 } ] ] },
+    "Split actors": { "main": [ [ { "node": "NewsAPI search per actor", "type": "main", "index": 0 } ] ] },
+    "NewsAPI search per actor": { "main": [ [ { "node": "Build statement", "type": "main", "index": 0 } ] ] },
+    "Build statement": { "main": [ [ { "node": "POST /internal/actors/statement", "type": "main", "index": 0 } ] ] },
+    "POST /internal/actors/statement": { "main": [ [ { "node": "Telegram log", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

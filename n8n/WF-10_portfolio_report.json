@@ -1,0 +1,97 @@
+{
+  "name": "WF-10 — Portfolio Impact Daily Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 1 * * *" } ] }
+      },
+      "id": "schedule",
+      "name": "01:00 UTC (08:00 WIB)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ -640, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "http://geoscan-backend:8000/internal/users/pro-with-portfolio",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "users",
+      "name": "Get pro users",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -420, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const arr = Array.isArray($json) ? $json : ($json.data || []);\nreturn arr.map(u => ({ json: u }));"
+      },
+      "id": "split",
+      "name": "Split users",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ -200, 300 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [ {
+            "leftValue": "={{ $json.portfolio_count }}",
+            "rightValue": 0,
+            "operator": { "type": "number", "operation": "gt" }
+          } ]
+        }
+      },
+      "id": "filter",
+      "name": "portfolio_count > 0",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [ 20, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/notifications/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"user_ids\": [ $json.user_id ],\n  \"title\": \"Laporan Dampak Portofolio Anda\",\n  \"body\": \"Tap untuk lihat dampak geopolitik ke investasi Anda hari ini.\",\n  \"data\": { \"type\": \"portfolio_report\" }\n} }}",
+        "options": {}
+      },
+      "id": "notify",
+      "name": "Send portfolio report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 240, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=💼 Portfolio report terkirim · {{ $now }}",
+        "additionalFields": {}
+      },
+      "id": "tg",
+      "name": "Telegram log",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 460, 300 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "01:00 UTC (08:00 WIB)": { "main": [ [ { "node": "Get pro users", "type": "main", "index": 0 } ] ] },
+    "Get pro users": { "main": [ [ { "node": "Split users", "type": "main", "index": 0 } ] ] },
+    "Split users": { "main": [ [ { "node": "portfolio_count > 0", "type": "main", "index": 0 } ] ] },
+    "portfolio_count > 0": { "main": [ [ { "node": "Send portfolio report", "type": "main", "index": 0 } ] ] },
+    "Send portfolio report": { "main": [ [ { "node": "Telegram log", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

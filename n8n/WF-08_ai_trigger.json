@@ -1,0 +1,113 @@
+{
+  "name": "WF-08 — AI Analysis Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "articles-ready",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh",
+      "name": "Webhook /articles-ready",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [ -640, 300 ],
+      "webhookId": "geoscan-articles-ready"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/tasks/scan-articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"article_ids\": ($json.body.article_ids || []) } }}",
+        "options": {}
+      },
+      "id": "scan",
+      "name": "Trigger scan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -420, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": { "amount": 60, "unit": "seconds" },
+      "id": "wait",
+      "name": "Wait 60s (Celery)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [ -200, 300 ],
+      "webhookId": "geoscan-wf08-wait"
+    },
+    {
+      "parameters": {
+        "url": "http://geoscan-backend:8000/internal/tripwire-events/recent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [ { "name": "minutes", "value": "2" } ] },
+        "options": {}
+      },
+      "id": "recent",
+      "name": "Get recent tripwire events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 20, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// One item per distinct crisis_id among recent events\nconst arr = Array.isArray($json) ? $json : ($json.data || []);\nconst seen = new Set();\nconst out = [];\nfor (const e of arr) {\n  const cid = e.crisis_id;\n  if (!cid || seen.has(cid)) continue;\n  seen.add(cid);\n  out.push({ json: { crisis_id: cid, trigger_reason: 'tripwire_fired' } });\n}\nreturn out;"
+      },
+      "id": "perCrisis",
+      "name": "Per crisis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 240, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/tasks/trigger-mutation",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "mutate",
+      "name": "Trigger mutation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 460, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=🤖 AI analysis: mutation di-trigger untuk crisis {{ $json.crisis_id }}",
+        "additionalFields": {}
+      },
+      "id": "tg",
+      "name": "Telegram log",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 680, 300 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "Webhook /articles-ready": { "main": [ [ { "node": "Trigger scan", "type": "main", "index": 0 } ] ] },
+    "Trigger scan": { "main": [ [ { "node": "Wait 60s (Celery)", "type": "main", "index": 0 } ] ] },
+    "Wait 60s (Celery)": { "main": [ [ { "node": "Get recent tripwire events", "type": "main", "index": 0 } ] ] },
+    "Get recent tripwire events": { "main": [ [ { "node": "Per crisis", "type": "main", "index": 0 } ] ] },
+    "Per crisis": { "main": [ [ { "node": "Trigger mutation", "type": "main", "index": 0 } ] ] },
+    "Trigger mutation": { "main": [ [ { "node": "Telegram log", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

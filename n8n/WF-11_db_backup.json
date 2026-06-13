@@ -1,0 +1,76 @@
+{
+  "name": "WF-11 — Database Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 20 * * *" } ] }
+      },
+      "id": "schedule",
+      "name": "20:00 UTC (03:00 WIB)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ -520, 300 ]
+    },
+    {
+      "parameters": {
+        "command": "=bash /opt/geoscan/scripts/backup_db.sh"
+      },
+      "id": "backup",
+      "name": "Run backup_db.sh",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [ -300, 300 ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [ {
+            "leftValue": "={{ $json.stdout }}",
+            "rightValue": "BACKUP_OK",
+            "operator": { "type": "string", "operation": "contains" }
+          } ]
+        }
+      },
+      "id": "ok",
+      "name": "Backup OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [ -80, 300 ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=✅ Backup sukses · {{ $json.stdout.trim() }} · {{ $now }}",
+        "additionalFields": {}
+      },
+      "id": "tg_ok",
+      "name": "Telegram success",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 140, 200 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=🚨 Backup GAGAL: {{ $json.stderr || $json.stdout }} · {{ $now }}",
+        "additionalFields": {}
+      },
+      "id": "tg_fail",
+      "name": "Telegram failure",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 140, 400 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "20:00 UTC (03:00 WIB)": { "main": [ [ { "node": "Run backup_db.sh", "type": "main", "index": 0 } ] ] },
+    "Run backup_db.sh": { "main": [ [ { "node": "Backup OK?", "type": "main", "index": 0 } ] ] },
+    "Backup OK?": { "main": [ [ { "node": "Telegram success", "type": "main", "index": 0 } ], [ { "node": "Telegram failure", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

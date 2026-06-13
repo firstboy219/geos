@@ -1,0 +1,90 @@
+{
+  "name": "WF-02 — Tripwire Fired → Push Notification",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tripwire-fired",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh",
+      "name": "Webhook /tripwire-fired",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [ -480, 300 ],
+      "webhookId": "geoscan-tripwire-fired"
+    },
+    {
+      "parameters": {
+        "url": "=http://geoscan-backend:8000/internal/subscriptions/crisis/{{ $json.body.crisis_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "subs",
+      "name": "Get crisis subscribers",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -240, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [ {
+            "leftValue": "={{ ($json.user_ids || []).length }}",
+            "rightValue": 0,
+            "operator": { "type": "number", "operation": "gt" }
+          } ]
+        }
+      },
+      "id": "if_subs",
+      "name": "Has subscribers?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [ 0, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/notifications/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"user_ids\": $json.user_ids,\n  \"title\": '⚡ Tripwire: ' + ($('Webhook /tripwire-fired').item.json.body.tripwire_name || 'Indikator terpicu'),\n  \"body\": 'Severity: ' + ($('Webhook /tripwire-fired').item.json.body.severity || 'high'),\n  \"data\": { \"crisis_id\": $('Webhook /tripwire-fired').item.json.body.crisis_id, \"type\": \"tripwire\", \"severity\": $('Webhook /tripwire-fired').item.json.body.severity }\n} }}",
+        "options": {}
+      },
+      "id": "notify",
+      "name": "Send notifications",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 240, 200 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=⚡ TRIPWIRE FIRED: {{ $('Webhook /tripwire-fired').item.json.body.tripwire_name }} | Severity: {{ $('Webhook /tripwire-fired').item.json.body.severity }} | Users: {{ ($('Get crisis subscribers').item.json.user_ids || []).length }}",
+        "additionalFields": {}
+      },
+      "id": "tg",
+      "name": "Telegram log",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 480, 200 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "Webhook /tripwire-fired": { "main": [ [ { "node": "Get crisis subscribers", "type": "main", "index": 0 } ] ] },
+    "Get crisis subscribers": { "main": [ [ { "node": "Has subscribers?", "type": "main", "index": 0 } ] ] },
+    "Has subscribers?": { "main": [ [ { "node": "Send notifications", "type": "main", "index": 0 } ], [] ] },
+    "Send notifications": { "main": [ [ { "node": "Telegram log", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

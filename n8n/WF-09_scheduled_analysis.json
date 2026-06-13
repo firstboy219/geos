@@ -1,0 +1,97 @@
+{
+  "name": "WF-09 — Scheduled Full AI Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 0,6,12,18 * * *" } ] }
+      },
+      "id": "schedule",
+      "name": "Every 6h (00/06/12/18 UTC)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ -700, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "http://geoscan-backend:8000/internal/crises/active-ids",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ids",
+      "name": "Get active crisis ids",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -480, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const arr = Array.isArray($json) ? $json : ($json.data || []);\nreturn arr.map(c => ({ json: { id: c.id, title: c.title } }));"
+      },
+      "id": "tolist",
+      "name": "To items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ -260, 300 ]
+    },
+    {
+      "parameters": { "batchSize": 1, "options": {} },
+      "id": "loop",
+      "name": "Loop (1 per crisis)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [ -40, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/tasks/trigger-mutation",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"crisis_id\": $json.id, \"trigger_reason\": \"scheduled_analysis\" } }}",
+        "options": {}
+      },
+      "id": "mutate",
+      "name": "Trigger mutation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 200, 420 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": { "amount": 180, "unit": "seconds" },
+      "id": "wait",
+      "name": "Wait 3 min (rate limit)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [ 420, 420 ],
+      "webhookId": "geoscan-wf09-wait"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=📊 Scheduled analysis selesai · crises diproses: {{ $json.length || 0 }} · {{ $now }}",
+        "additionalFields": {}
+      },
+      "id": "tg",
+      "name": "Telegram summary",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 200, 200 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "Every 6h (00/06/12/18 UTC)": { "main": [ [ { "node": "Get active crisis ids", "type": "main", "index": 0 } ] ] },
+    "Get active crisis ids": { "main": [ [ { "node": "To items", "type": "main", "index": 0 } ] ] },
+    "To items": { "main": [ [ { "node": "Loop (1 per crisis)", "type": "main", "index": 0 } ] ] },
+    "Loop (1 per crisis)": { "main": [ [ { "node": "Telegram summary", "type": "main", "index": 0 } ], [ { "node": "Trigger mutation", "type": "main", "index": 0 } ] ] },
+    "Trigger mutation": { "main": [ [ { "node": "Wait 3 min (rate limit)", "type": "main", "index": 0 } ] ] },
+    "Wait 3 min (rate limit)": { "main": [ [ { "node": "Loop (1 per crisis)", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}

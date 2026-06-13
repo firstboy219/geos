@@ -1,0 +1,593 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.ph{width:340px;margin:0 auto;background:#0D1117;border-radius:36px;border:1.5px solid #30363d;overflow:hidden;font-family:var(--font-sans)}
+.sb{display:flex;justify-content:space-between;align-items:center;padding:12px 20px 6px}
+.sb span{font-size:12px;font-weight:500;color:#8B949E}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:0.5px solid #21262d}
+.logo{font-size:17px;font-weight:500;color:#fff}.logo span{color:#4493F8}
+
+/* category tabs */
+.cattabs{display:flex;gap:0;border-bottom:0.5px solid #21262d;padding:0 14px;overflow-x:auto;scrollbar-width:none}
+.cattabs::-webkit-scrollbar{display:none}
+.ct{flex-shrink:0;padding:8px 12px;font-size:12px;color:#8B949E;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.ct.on{color:#4493F8;border-bottom-color:#4493F8;font-weight:500}
+
+.sc{padding:12px 14px}
+
+/* geopolitical risk banner */
+.geo-banner{background:#161B22;border:0.5px solid #30363d;border-radius:12px;padding:12px 13px;margin-bottom:10px}
+.geo-banner-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.geo-title{font-size:12px;font-weight:500;color:#F0F6FC}
+.geo-score{font-size:22px;font-weight:500}
+.geo-sub{font-size:11px;color:#8B9FB8;margin-bottom:8px;line-height:1.4}
+.geo-chips{display:flex;flex-wrap:wrap;gap:4px}
+.gchip{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;cursor:help;position:relative;border:0.5px solid}
+.gchip-tip{display:none;position:absolute;bottom:calc(100%+4px);left:0;background:#1C2333;border:0.5px solid #30363d;border-radius:8px;padding:7px 9px;font-size:10px;color:#C9D1D9;line-height:1.5;width:200px;z-index:99;font-weight:400}
+.gchip:hover .gchip-tip{display:block}
+
+/* section header */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:2px}
+.stitle{font-size:12px;font-weight:500;color:#8B949E;text-transform:uppercase;letter-spacing:.4px}
+.slink{font-size:12px;color:#4493F8;cursor:pointer}
+
+/* asset row */
+.arow{display:flex;align-items:center;padding:9px 0;border-bottom:0.5px solid #21262d;cursor:pointer}
+.arow:last-child{border-bottom:none}
+.aicon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0;margin-right:10px}
+.aname{font-size:13px;font-weight:500;color:#F0F6FC}
+.asub{font-size:11px;color:#6E7681;margin-top:1px}
+.aright{text-align:right;flex-shrink:0}
+.aprice{font-size:13px;font-weight:500;color:#F0F6FC}
+.achange{font-size:11px;margin-top:1px}
+.up{color:#3FB950}.dn{color:#F85149}.nt{color:#8B949E}
+
+/* geo signal badge on asset */
+.geo-sig{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;margin-top:2px;cursor:help;position:relative;border:0.5px solid}
+.gs-tip{display:none;position:absolute;bottom:calc(100%+4px);right:0;background:#1C2333;border:0.5px solid #30363d;border-radius:8px;padding:7px 9px;font-size:10px;color:#C9D1D9;line-height:1.5;width:210px;z-index:99;font-weight:400}
+.geo-sig:hover .gs-tip{display:block}
+
+/* mini sparkline */
+.spark{display:flex;align-items:flex-end;gap:2px;height:22px;margin-left:8px}
+.sb2{width:4px;border-radius:1px;flex-shrink:0}
+
+/* card */
+.card{background:#161B22;border:0.5px solid #30363d;border-radius:12px;padding:12px 13px;margin-bottom:8px}
+
+/* portfolio summary */
+.port-sum{background:#161B22;border:0.5px solid #30363d;border-radius:14px;padding:14px;margin-bottom:10px}
+.port-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.pg{background:#0D1117;border-radius:10px;padding:9px 11px}
+.pg-n{font-size:18px;font-weight:500;margin-bottom:2px}
+.pg-l{font-size:11px;color:#6E7681;line-height:1.3}
+
+/* scenario impact matrix */
+.sim-head{display:flex;gap:3px;margin-bottom:6px}
+.sim-scn{flex:1;text-align:center;font-size:10px;font-weight:500;padding:3px 4px;border-radius:6px}
+.sim-row{display:flex;align-items:center;gap:3px;margin-bottom:4px}
+.sim-label{font-size:11px;color:#C9D1D9;width:88px;flex-shrink:0}
+.sim-cell{flex:1;text-align:center;font-size:10px;font-weight:500;padding:3px 2px;border-radius:5px}
+
+/* heatmap */
+.heatrow{display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.hl{font-size:11px;color:#8B949E;width:80px;flex-shrink:0}
+.hbar{flex:1;height:8px;border-radius:4px;overflow:hidden;background:#21262d}
+.hfill{height:100%;border-radius:4px}
+.hpct{font-size:10px;font-weight:500;width:34px;text-align:right;flex-shrink:0}
+
+/* chart area */
+.chart-wrap{background:#0D1117;border-radius:8px;padding:8px 10px;margin-top:8px}
+.chart-label{font-size:10px;color:#8B949E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.bars-row{display:flex;align-items:flex-end;gap:3px;height:60px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1}
+.bar-body{width:100%;border-radius:3px 3px 0 0}
+.bar-x{font-size:9px;color:#6E7681}
+
+/* filter chips */
+.fchips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px;margin-bottom:8px}
+.fchips::-webkit-scrollbar{display:none}
+.fc{flex-shrink:0;padding:4px 10px;border-radius:14px;font-size:11px;color:#8B949E;background:#161B22;border:0.5px solid #30363d;cursor:pointer}
+.fc.on{color:#4493F8;background:#0D2044;border-color:#4493F8;font-weight:500}
+
+/* nav */
+.bnav{display:flex;background:#161B22;border-top:0.5px solid #30363d;padding:8px 0 12px}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 0;position:relative}
+.ni .ico{font-size:20px;color:#6E7681}.ni .lbl{font-size:10px;color:#6E7681}
+.ni.on .ico,.ni.on .lbl{color:#4493F8}
+.ndot{width:4px;height:4px;border-radius:50%;background:#4493F8;opacity:0}.ni.on .ndot{opacity:1}
+.notif-dot{width:7px;height:7px;border-radius:50%;background:#F85149;position:absolute;top:2px;right:20px}
+
+.dv{height:0.5px;background:#21262d;margin:8px 0}
+</style>
+
+<div style="padding:16px 0">
+<div class="ph">
+  <div class="sb">
+    <span>9:41</span><span style="letter-spacing:1px">●●●●●</span>
+    <span style="display:flex;gap:4px"><i class="ti ti-wifi" style="font-size:13px"></i><i class="ti ti-battery" style="font-size:13px"></i></span>
+  </div>
+
+  <div class="topbar">
+    <span class="logo">GEO<span>SCAN</span></span>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:11px;font-weight:500;color:#4493F8;background:#0D2044;border:0.5px solid #1F4A8A;border-radius:6px;padding:3px 7px;cursor:pointer" onclick="this.textContent=this.textContent==='EN'?'ID':'EN'">EN</span>
+      <div style="width:32px;height:32px;border-radius:50%;background:#161B22;border:0.5px solid #30363d;display:flex;align-items:center;justify-content:center;color:#8B949E;font-size:16px;position:relative;cursor:pointer">
+        <i class="ti ti-bell" aria-hidden="true"></i><div class="notif-dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORY TABS -->
+  <div class="cattabs">
+    <div class="ct on" id="ct-all" onclick="setTab('all')">Semua</div>
+    <div class="ct" id="ct-saham" onclick="setTab('saham')">Saham</div>
+    <div class="ct" id="ct-fx" onclick="setTab('fx')">Kurs &amp; Mata Uang</div>
+    <div class="ct" id="ct-komoditas" onclick="setTab('komoditas')">Komoditas</div>
+    <div class="ct" id="ct-crypto" onclick="setTab('crypto')">Crypto</div>
+  </div>
+
+  <div class="sc">
+
+    <!-- ═══ GEOPOLITICAL RISK OVERLAY ═══ -->
+    <div class="geo-banner">
+      <div class="geo-banner-top">
+        <div>
+          <div class="geo-title">Risiko Geopolitik ke Pasar</div>
+          <div style="font-size:11px;color:#6E7681;margin-top:1px">Berdasarkan 3 situasi aktif · 16 lapisan AI</div>
+        </div>
+        <div style="text-align:right">
+          <div class="geo-score" style="color:#E3B341">6.2<span style="font-size:14px;color:#6E7681">/10</span></div>
+          <div style="font-size:10px;color:#E3B341">Waspada</div>
+        </div>
+      </div>
+      <div class="geo-sub">Shock Multiplier (+12%) aktif karena harga komoditas jatuh + El Niño. Pasar lebih sensitif dari biasanya terhadap setiap perkembangan geopolitik.</div>
+      <div class="geo-chips">
+        <div class="gchip" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+          Natuna: Sedang
+          <div class="gchip-tip"><strong>Natuna ZEE</strong><br>Redline 3/10 · Misread 6/10 · Gray Zone aktif<br>Skenario dominan (43%): tidak ada eskalasi → pasar cenderung stabil</div>
+        </div>
+        <div class="gchip" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+          LCS: Tinggi
+          <div class="gchip-tip"><strong>Laut China Selatan</strong><br>Redline 8/10 · Misread 7/10 · Multi-aktor<br>Skenario dominan (42%): frozen conflict → energi naik, pariwisata turun</div>
+        </div>
+        <div class="gchip" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+          Taiwan: Tinggi
+          <div class="gchip-tip"><strong>Selat Taiwan</strong><br>Redline 10/10 · Nuclear adjacent · TDI ↑<br>Skenario dominan (40%): gray zone → chip/semikonduktor volatile</div>
+        </div>
+        <div class="gchip" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+          M: +12%
+          <div class="gchip-tip"><strong>Shock Multiplier (Lapisan M)</strong><br>Komoditas jatuh + El Niño aktif bersamaan → semua probabilitas konflik naik 12%</div>
+        </div>
+        <div class="gchip" style="background:#1A1040;color:#9B59B6;border-color:#5B21B6">
+          TDI ↑ T-21d
+          <div class="gchip-tip"><strong>Technology Disruption Index (Lapisan N)</strong><br>Drone swarm baru PLAN diuji pekan lalu → Action Readiness China: T-21 hari. Pasar semakin sensitif terhadap berita militer.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PORTFOLIO RINGKASAN ═══ -->
+    <div class="port-sum">
+      <div style="font-size:12px;font-weight:500;color:#F0F6FC;margin-bottom:2px">Portofolio Anda</div>
+      <div style="font-size:11px;color:#6E7681">Dampak geopolitik tertimbang real-time</div>
+      <div class="port-grid">
+        <div class="pg">
+          <div class="pg-n" style="color:#F0F6FC">Rp 847 jt</div>
+          <div class="pg-l">Total nilai</div>
+        </div>
+        <div class="pg">
+          <div class="pg-n" style="color:#F85149">−Rp 71 jt</div>
+          <div class="pg-l">Estimasi dampak skenario negatif</div>
+        </div>
+        <div class="pg">
+          <div class="pg-n" style="color:#E3B341">6.2/10</div>
+          <div class="pg-l">Skor risiko geopolitik</div>
+        </div>
+        <div class="pg">
+          <div class="pg-n" style="color:#3FB950">Emas ↑</div>
+          <div class="pg-l">Aset terkuat saat ini</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SKENARIO × PASAR MATRIX ═══ -->
+    <div class="card">
+      <div style="font-size:12px;font-weight:500;color:#F0F6FC;margin-bottom:2px">Dampak Skenario ke Kelas Aset</div>
+      <div style="font-size:11px;color:#6E7681;margin-bottom:10px">Hover setiap sel untuk detail · Probabilitas tertimbang</div>
+
+      <!-- Header -->
+      <div class="sim-head">
+        <div style="width:88px;flex-shrink:0"></div>
+        <div class="sim-scn" style="background:#0D2818;color:#3FB950">S1 · 43%</div>
+        <div class="sim-scn" style="background:#2D1B00;color:#E3B341">S2 · 29%</div>
+        <div class="sim-scn" style="background:#3D1010;color:#F85149">S3 · 15%</div>
+        <div class="sim-scn" style="background:#0D2044;color:#4493F8">S4 · 9%</div>
+      </div>
+
+      <!-- Rows -->
+      <div class="sim-row">
+        <div class="sim-label">IHSG / Saham</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑+8%</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓−15%</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓−22%</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑+18%</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-label">IDR / USD</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→stabil</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓16.500</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓17.500</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑14.800</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-label">Emas (XAU)</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→netral</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑safe</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑↑max</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→soft</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-label">Nikel / EV</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑EV</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→mix</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓halt</div>
+        <div class="sim-cell" style="background:#0D2818;color:#3FB950">↑deal</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-label">Crypto</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→mix</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓sell</div>
+        <div class="sim-cell" style="background:#3D1010;color:#F85149">↓sell</div>
+        <div class="sim-cell" style="background:#21262d;color:#8B949E">→mild</div>
+      </div>
+      <div style="font-size:10px;color:#6E7681;margin-top:6px">S1: Tidak eskalasi · S2: Forced alignment · S3: Insiden laut · S4: Mediator</div>
+    </div>
+
+    <!-- ═══ FILTER CHIPS ═══ -->
+    <div class="fchips">
+      <div class="fc on">Semua aset</div>
+      <div class="fc">↑ Potensi naik</div>
+      <div class="fc">↓ Potensi turun</div>
+      <div class="fc">⚡ Dipengaruhi Natuna</div>
+      <div class="fc">⚛ Dipengaruhi Taiwan</div>
+    </div>
+
+    <!-- ═══ SAHAM INDONESIA ═══ -->
+    <div class="shdr" style="margin-top:2px">
+      <span class="stitle">Saham Indonesia</span>
+      <span class="slink">Lihat semua</span>
+    </div>
+    <div class="card" style="padding:4px 12px">
+
+      <!-- IHSG -->
+      <div class="arow" onclick="sendPrompt('Analisis IHSG dengan framework Geoscan — skenario apa yang paling berdampak?')">
+        <div class="aicon" style="background:#0D1F3C;color:#4493F8">IDX</div>
+        <div style="flex:1">
+          <div class="aname">IHSG</div>
+          <div class="asub">Indeks Harga Saham Gabungan</div>
+          <div class="geo-sig" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+            ↓ Risiko −12% tertimbang
+            <div class="gs-tip"><strong>Geopolitical Impact (Weighted)</strong><br>Probabilitas tertimbang: S1(43%)×+8% + S2(29%)×−15% + S3(15%)×−22% + S4(9%)×+18% = <strong>−1.9% expected</strong> dengan downside risk −22% jika S3 terpicu.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">7.284</div>
+          <div class="achange dn">▼ −0.82%</div>
+        </div>
+      </div>
+
+      <!-- BBCA -->
+      <div class="arow" onclick="sendPrompt('Analisis saham BBCA dari perspektif geopolitik Geoscan')">
+        <div class="aicon" style="background:#0D2044;color:#4493F8;font-size:11px">BBCA</div>
+        <div style="flex:1">
+          <div class="aname">Bank BCA</div>
+          <div class="asub">Perbankan — sensitif kurs IDR</div>
+          <div class="geo-sig" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+            ! Pantau IDR
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>BBCA sangat sensitif terhadap pergerakan IDR. Jika S2 terjadi (IDR 16.500+), saham perbankan tertekan karena cost of fund naik dan NPL berpotensi meningkat.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">Rp 9.475</div>
+          <div class="achange dn">▼ −1.2%</div>
+        </div>
+      </div>
+
+      <!-- TLKM -->
+      <div class="arow" onclick="sendPrompt('Analisis TLKM Telkom dari perspektif skenario geopolitik')">
+        <div class="aicon" style="background:#0D2044;color:#4493F8;font-size:11px">TLKM</div>
+        <div style="flex:1">
+          <div class="aname">Telkom Indonesia</div>
+          <div class="asub">Telekomunikasi — defensive</div>
+          <div class="geo-sig" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+            ↑ Defensive stock
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>Saham telekomunikasi cenderung defensive — tidak naik banyak tapi juga tidak jatuh jauh. Di skenario manapun kecuali S5, TLKM relatif stabil karena revenue berbasis domestik.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">Rp 3.210</div>
+          <div class="achange nt">▶ 0.00%</div>
+        </div>
+      </div>
+
+      <!-- ANTM -->
+      <div class="arow" onclick="sendPrompt('Bagaimana skenario geopolitik mempengaruhi ANTM Aneka Tambang dan saham nikel?')">
+        <div class="aicon" style="background:#0D2818;color:#3FB950;font-size:11px">ANTM</div>
+        <div style="flex:1">
+          <div class="aname">Aneka Tambang</div>
+          <div class="asub">Nikel &amp; emas — leverage komoditas</div>
+          <div class="geo-sig" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+            ! Natuna + Nikel watch
+            <div class="gs-tip"><strong>Geopolitical Signal (Natuna + LCS)</strong><br>Jika S1 (43%): EV demand naik → ANTM rally. Jika S3 (15%): China halt nikel offtake → ANTM jatuh tajam. Shock Multiplier M (+12%) aktif meningkatkan volatilitas kedua arah.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">Rp 1.545</div>
+          <div class="achange dn">▼ −2.8%</div>
+        </div>
+      </div>
+
+      <!-- PINDAD/defense -->
+      <div class="arow" onclick="sendPrompt('Mengapa saham sektor pertahanan Indonesia naik dalam skenario geopolitik tertentu?')">
+        <div class="aicon" style="background:#1C1020;color:#9B59B6;font-size:11px">DEF</div>
+        <div style="flex:1">
+          <div class="aname">Sektor Pertahanan</div>
+          <div class="asub">PINDAD · LEN · LAPAN — naik di krisis</div>
+          <div class="geo-sig" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+            ↑ Naik di S2 &amp; S3
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>Sektor pertahanan naik ketika eskalasi terjadi karena anggaran militer naik. S2 (forced alignment): +15%. S3 (insiden laut): +25%. Korelasi positif dengan ketegangan geopolitik.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">+18.4%</div>
+          <div class="achange up">▲ YTD</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ KURS & MATA UANG ═══ -->
+    <div class="shdr">
+      <span class="stitle">Kurs &amp; Mata Uang</span>
+      <span class="slink">Detail</span>
+    </div>
+    <div class="card" style="padding:4px 12px">
+
+      <!-- IDR/USD -->
+      <div class="arow" onclick="sendPrompt('Analisis IDR Rupiah dengan semua skenario geopolitik aktif Geoscan')">
+        <div class="aicon" style="background:#0D2818;color:#3FB950;font-size:13px">IDR</div>
+        <div style="flex:1">
+          <div class="aname">USD/IDR</div>
+          <div class="asub">Rupiah — sangat sensitif geopolitik</div>
+          <div class="geo-sig" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+            ↓ Downside risk: 17.500
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>S1 (43%): stabil 15.000–15.500 · S2 (29%): 16.500+ · S3 (15%): 17.000–17.500 · S4 (9%): 14.800. Weighted expected: 15.380. IDR adalah barometer paling cepat terhadap perubahan sentimen geopolitik.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">15.425</div>
+          <div class="achange dn">▼ +125</div>
+        </div>
+      </div>
+
+      <!-- CNY -->
+      <div class="arow" onclick="sendPrompt('Bagaimana Yuan China CNY bergerak dalam skenario konflik Natuna dan Taiwan?')">
+        <div class="aicon" style="background:#1A2740;color:#4493F8;font-size:13px">CNY</div>
+        <div style="flex:1">
+          <div class="aname">USD/CNY</div>
+          <div class="asub">Yuan China — terkait erat LCS &amp; Taiwan</div>
+          <div class="geo-sig" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+            ! Pantau Taiwan TDI
+            <div class="gs-tip"><strong>Geopolitical Signal (Taiwan + TDI)</strong><br>Jika TDI naik dan Taiwan S2 terpicu (blokade): CNY tertekan karena capital outflow dari China. Jika de-eskalasi: CNY menguat. Indikator leading untuk sentimen risiko China.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">7.248</div>
+          <div class="achange dn">▼ −0.3%</div>
+        </div>
+      </div>
+
+      <!-- USD/JPY sebagai safe haven indicator -->
+      <div class="arow" onclick="sendPrompt('Mengapa JPY Yen Jepang naik saat krisis geopolitik?')">
+        <div class="aicon" style="background:#2D1B00;color:#E3B341;font-size:13px">JPY</div>
+        <div style="flex:1">
+          <div class="aname">USD/JPY</div>
+          <div class="asub">Yen Jepang — safe haven Asia</div>
+          <div class="geo-sig" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+            ↑ Safe haven aktif
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>JPY menguat saat ketegangan naik — investor global lari ke aset aman. Jika S3 (insiden Natuna) atau S2 (blokade Taiwan) terpicu: JPY rally 3–8%. Leading indicator ketakutan pasar global.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">149.8</div>
+          <div class="achange up">▲ +0.4%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ KOMODITAS ═══ -->
+    <div class="shdr">
+      <span class="stitle">Komoditas</span>
+      <span class="slink">Detail</span>
+    </div>
+    <div class="card" style="padding:4px 12px">
+
+      <!-- Gold -->
+      <div class="arow" onclick="sendPrompt('Analisis emas XAU dengan semua skenario geopolitik Natuna, LCS, Taiwan')">
+        <div class="aicon" style="background:#2D1B00;color:#E3B341;font-size:12px">XAU</div>
+        <div style="flex:1">
+          <div class="aname">Emas (Gold)</div>
+          <div class="asub">Safe haven terbaik semua skenario</div>
+          <div class="geo-sig" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+            ↑ Naik di semua skenario negatif
+            <div class="gs-tip"><strong>Geopolitical Signal — Optimal Hedge</strong><br>S1 (43%): netral · S2 (29%): +8–12% · S3 (15%): +15–20% · S4 (9%): sedikit turun · S5 (4%): +25%+. Emas adalah satu-satunya aset yang naik di seluruh skenario negatif secara bersamaan.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$3.324</div>
+          <div class="achange up">▲ +0.8%</div>
+        </div>
+      </div>
+
+      <!-- Nickel -->
+      <div class="arow" onclick="sendPrompt('Analisis harga nikel LME dan hubungannya dengan Shock Multiplier dan Natuna')">
+        <div class="aicon" style="background:#0D2818;color:#3FB950;font-size:11px">NKL</div>
+        <div style="flex:1">
+          <div class="aname">Nikel (LME)</div>
+          <div class="asub">Pivot point Natuna — mendekati $12k</div>
+          <div class="geo-sig" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+            ⚠ Mendekati Tripwire TW-02
+            <div class="gs-tip"><strong>Tripwire TW-02 aktif (Lapisan C)</strong><br>Nikel &lt;$12k = Shock Multiplier naik lagi + RFS Indonesia naik +2 poin. Ini adalah Pivot Watch item kritis — jika terpicu, distribusi probabilitas semua skenario bermutasi otomatis.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$12.840</div>
+          <div class="achange dn">▼ −3.1%</div>
+        </div>
+      </div>
+
+      <!-- Crude Oil -->
+      <div class="arow" onclick="sendPrompt('Bagaimana harga minyak mentah bergerak dalam skenario LCS dan Taiwan Strait?')">
+        <div class="aicon" style="background:#1A1208;color:#E3B341;font-size:11px">CL</div>
+        <div style="flex:1">
+          <div class="aname">Minyak Mentah (WTI)</div>
+          <div class="asub">Naik saat jalur LCS terganggu</div>
+          <div class="geo-sig" style="background:#0D2818;color:#3FB950;border-color:#1A4D2E">
+            ↑ LCS escalation premium
+            <div class="gs-tip"><strong>Geopolitical Signal (LCS)</strong><br>30% perdagangan dunia lewat LCS. Jika frozen conflict berlanjut: harga naik 5–10% karena risk premium. Jika insiden militer terjadi: naik 20–35% seketika karena gangguan supply.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$79.4</div>
+          <div class="achange up">▲ +1.4%</div>
+        </div>
+      </div>
+
+      <!-- Gandum/pangan -->
+      <div class="arow" onclick="sendPrompt('Bagaimana El Nino dan Shock Multiplier mempengaruhi harga pangan global?')">
+        <div class="aicon" style="background:#1A1208;color:#E3B341;font-size:11px">WHT</div>
+        <div style="flex:1">
+          <div class="aname">Gandum (Wheat)</div>
+          <div class="asub">El Niño + LCS supply chain</div>
+          <div class="geo-sig" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+            ! Shock Multiplier aktif
+            <div class="gs-tip"><strong>Systemic Shock × Geopolitical (Layer M)</strong><br>El Niño mengurangi pasokan global + LCS disruption mengganggu pengiriman. Kombinasi = risiko pangan naik. Jika kedua faktor memuncak bersamaan: gandum +15–25%.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$5.42</div>
+          <div class="achange up">▲ +2.1%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CRYPTO ═══ -->
+    <div class="shdr">
+      <span class="stitle">Crypto</span>
+      <span class="slink">Detail</span>
+    </div>
+    <div class="card" style="padding:4px 12px">
+
+      <!-- BTC -->
+      <div class="arow" onclick="sendPrompt('Bagaimana Bitcoin BTC bergerak dalam berbagai skenario geopolitik aktif?')">
+        <div class="aicon" style="background:#201030;color:#9B59B6;font-size:12px">BTC</div>
+        <div style="flex:1">
+          <div class="aname">Bitcoin</div>
+          <div class="asub">Risk-off di S2 &amp; S3 — hedge di siber</div>
+          <div class="geo-sig" style="background:#2D1B00;color:#E3B341;border-color:#4A3000">
+            ! Mixed — tergantung skenario
+            <div class="gs-tip"><strong>Geopolitical Signal</strong><br>S1 (43%): netral · S2 (29%): turun (risk-off, investor jual) · S3 (15%): turun tajam · Skenario siber: naik (hedge infrastruktur). BTC bukan safe haven saat geopolitik — reaksi seperti saham berisiko tinggi.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$103.4k</div>
+          <div class="achange dn">▼ −1.8%</div>
+        </div>
+      </div>
+
+      <!-- ETH -->
+      <div class="arow" onclick="sendPrompt('Bagaimana ETH Ethereum terpengaruh skenario geopolitik terutama Taiwan chip crisis?')">
+        <div class="aicon" style="background:#201030;color:#9B59B6;font-size:12px">ETH</div>
+        <div style="flex:1">
+          <div class="aname">Ethereum</div>
+          <div class="asub">Lebih volatil dari BTC saat krisis</div>
+          <div class="geo-sig" style="background:#3D1010;color:#F85149;border-color:#5C1C1C">
+            ↓ Lebih sensitif dari BTC
+            <div class="gs-tip"><strong>Geopolitical Signal (Taiwan)</strong><br>Jika Taiwan S2 (chip shortage): infrastruktur blockchain ikut terdampak — server, mining hardware semua pakai chip Taiwan. ETH lebih terdampak dari BTC karena proof-of-stake memerlukan lebih banyak komputasi.</div>
+          </div>
+        </div>
+        <div class="aright">
+          <div class="aprice">$2.487</div>
+          <div class="achange dn">▼ −2.4%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ GEOPOLITICAL HEATMAP ═══ -->
+    <div class="card">
+      <div style="font-size:12px;font-weight:500;color:#F0F6FC;margin-bottom:2px">Geopolitical Heatmap</div>
+      <div style="font-size:11px;color:#6E7681;margin-bottom:10px">Seberapa besar setiap situasi mempengaruhi kelas aset ini</div>
+
+      <div style="font-size:10px;color:#8B949E;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Pengaruh situasi ke kelas aset</div>
+
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:6px">
+        <div></div>
+        <div style="font-size:10px;color:#8B949E;text-align:center">🇮🇩 Natuna</div>
+        <div style="font-size:10px;color:#8B949E;text-align:center">🌊 LCS</div>
+        <div style="font-size:10px;color:#8B949E;text-align:center">🇹🇼 Taiwan</div>
+      </div>
+
+      <!-- rows -->
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px">
+        <div style="font-size:11px;color:#C9D1D9;align-self:center">IHSG</div>
+        <div style="background:#E3B341;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#0D1117">Tinggi</div>
+        <div style="background:#E3B341;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#0D1117">Tinggi</div>
+        <div style="background:#F85149;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sangat</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px">
+        <div style="font-size:11px;color:#C9D1D9;align-self:center">IDR/USD</div>
+        <div style="background:#F85149;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sangat</div>
+        <div style="background:#E3B341;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#0D1117">Tinggi</div>
+        <div style="background:#E3B341;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#0D1117">Tinggi</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px">
+        <div style="font-size:11px;color:#C9D1D9;align-self:center">Emas</div>
+        <div style="background:#5F6B3A;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sedang</div>
+        <div style="background:#5F6B3A;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sedang</div>
+        <div style="background:#E3B341;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#0D1117">Tinggi</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px;margin-bottom:4px">
+        <div style="font-size:11px;color:#C9D1D9;align-self:center">Nikel</div>
+        <div style="background:#F85149;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sangat</div>
+        <div style="background:#5F6B3A;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sedang</div>
+        <div style="background:#30363d;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8B949E">Rendah</div>
+      </div>
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 1fr;gap:4px">
+        <div style="font-size:11px;color:#C9D1D9;align-self:center">Chip/Tech</div>
+        <div style="background:#30363d;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8B949E">Rendah</div>
+        <div style="background:#5F6B3A;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sedang</div>
+        <div style="background:#F85149;border-radius:4px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">Sangat</div>
+      </div>
+
+      <div style="font-size:10px;color:#6E7681;margin-top:8px;line-height:1.5">Intensitas menunjukkan seberapa besar probabilitas skenario di setiap situasi mempengaruhi pergerakan kelas aset tersebut.</div>
+    </div>
+
+  </div>
+
+  <div class="bnav">
+    <div class="ni" onclick="sendPrompt('Kembali ke Home Analisis Geoscan')"><i class="ti ti-home ico" aria-hidden="true"></i><span class="lbl">Analisis</span></div>
+    <div class="ni on"><i class="ti ti-chart-bar ico" aria-hidden="true"></i><span class="lbl">Pasar</span><div class="ndot"></div></div>
+    <div class="ni" onclick="sendPrompt('Buka halaman Portofolio Geoscan')"><i class="ti ti-wallet ico" aria-hidden="true"></i><span class="lbl">Portofolio</span></div>
+    <div class="ni" onclick="sendPrompt('Buka Account Geoscan')"><i class="ti ti-user ico" aria-hidden="true"></i><span class="lbl">Profil</span></div>
+  </div>
+</div>
+</div>
+
+<script>
+function setTab(t){
+  ['all','saham','fx','komoditas','crypto'].forEach(x=>{
+    const e=document.getElementById('ct-'+x);
+    if(e){e.classList.remove('on')}
+  });
+  const sel=document.getElementById('ct-'+t);
+  if(sel)sel.classList.add('on');
+}
+</script>

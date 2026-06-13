@@ -1,0 +1,174 @@
+{
+  "name": "WF-01 — OSINT News Ingestion",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "minutes", "minutesInterval": 15 } ] }
+      },
+      "id": "schedule",
+      "name": "Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ -640, 320 ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [
+          { "name": "query", "value": "geopolitical military sanctions crisis naval" },
+          { "name": "mode", "value": "artlist" },
+          { "name": "maxrecords", "value": "50" },
+          { "name": "format", "value": "json" },
+          { "name": "timespan", "value": "15min" },
+          { "name": "sort", "value": "DateDesc" }
+        ] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "gdelt",
+      "name": "GDELT (free)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -420, 200 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize GDELT artlist → common article shape\nconst items = $json.articles || [];\nreturn items.map(a => ({ json: {\n  title: a.title || a.url,\n  source_name: a.domain || a.sourcecountry || 'GDELT',\n  url: a.url,\n  content_summary: a.title || '',\n  published_at: a.seendate ? new Date(a.seendate.replace(/(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})Z/, '$1-$2-$3T$4:$5:$6Z')).toISOString() : new Date().toISOString(),\n  language: 'en',\n  credibility_score: 0.7\n}}));"
+      },
+      "id": "norm_gdelt",
+      "name": "Normalize GDELT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ -200, 200 ]
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": { "parameters": [
+          { "name": "q", "value": "geopolitical OR military OR sanctions OR territorial dispute" },
+          { "name": "language", "value": "en" },
+          { "name": "sortBy", "value": "publishedAt" },
+          { "name": "pageSize", "value": "30" }
+        ] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "newsapi",
+      "name": "NewsAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -420, 440 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_NEWSAPI", "name": "newsApiKey" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize NewsAPI → common article shape\nconst items = $json.articles || [];\nreturn items.map(a => ({ json: {\n  title: a.title || a.url,\n  source_name: (a.source && a.source.name) || 'NewsAPI',\n  url: a.url,\n  content_summary: a.description || a.title || '',\n  published_at: a.publishedAt || new Date().toISOString(),\n  language: 'en',\n  credibility_score: 0.75\n}}));"
+      },
+      "id": "norm_newsapi",
+      "name": "Normalize NewsAPI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ -200, 440 ]
+    },
+    {
+      "parameters": { "mode": "combine", "combineBy": "combineAll", "options": {} },
+      "id": "merge",
+      "name": "Merge GDELT + NewsAPI",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [ 40, 320 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Dedupe by URL, drop empties, wrap into a single {articles:[...]} item\nconst seen = new Set();\nconst articles = [];\nfor (const i of $input.all()) {\n  const a = i.json;\n  if (!a || !a.url || seen.has(a.url)) continue;\n  seen.add(a.url);\n  articles.push(a);\n}\nreturn [{ json: { articles } }];"
+      },
+      "id": "dedupe",
+      "name": "Dedupe by URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 260, 320 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/news/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"articles\": $json.articles } }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "ingest",
+      "name": "POST /internal/news/ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 480, 320 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [ {
+            "leftValue": "={{ $json.accepted }}",
+            "rightValue": 0,
+            "operator": { "type": "number", "operation": "gt" }
+          } ]
+        }
+      },
+      "id": "if_ok",
+      "name": "Accepted > 0?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [ 700, 320 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://geoscan-backend:8000/internal/tasks/scan-articles",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"article_ids\": ($json.queued_ids || []) } }}",
+        "options": {}
+      },
+      "id": "scan",
+      "name": "Trigger AI scan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 920, 220 ],
+      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=⚠️ OSINT WF-01: accepted={{ $json.accepted }} but no queue / possible error at {{ $now }}",
+        "additionalFields": {}
+      },
+      "id": "tg_err",
+      "name": "Telegram admin alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [ 920, 420 ],
+      "credentials": { "telegramApi": { "id": "REPLACE_TELEGRAM", "name": "telegramAdmin" } }
+    }
+  ],
+  "connections": {
+    "Every 15 min": { "main": [ [ { "node": "GDELT (free)", "type": "main", "index": 0 }, { "node": "NewsAPI", "type": "main", "index": 0 } ] ] },
+    "GDELT (free)": { "main": [ [ { "node": "Normalize GDELT", "type": "main", "index": 0 } ] ] },
+    "Normalize GDELT": { "main": [ [ { "node": "Merge GDELT + NewsAPI", "type": "main", "index": 0 } ] ] },
+    "NewsAPI": { "main": [ [ { "node": "Normalize NewsAPI", "type": "main", "index": 0 } ] ] },
+    "Normalize NewsAPI": { "main": [ [ { "node": "Merge GDELT + NewsAPI", "type": "main", "index": 1 } ] ] },
+    "Merge GDELT + NewsAPI": { "main": [ [ { "node": "Dedupe by URL", "type": "main", "index": 0 } ] ] },
+    "Dedupe by URL": { "main": [ [ { "node": "POST /internal/news/ingest", "type": "main", "index": 0 } ] ] },
+    "POST /internal/news/ingest": { "main": [ [ { "node": "Accepted > 0?", "type": "main", "index": 0 } ] ] },
+    "Accepted > 0?": { "main": [ [ { "node": "Trigger AI scan", "type": "main", "index": 0 } ], [ { "node": "Telegram admin alert", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [ { "name": "geoscan" } ]
+}
