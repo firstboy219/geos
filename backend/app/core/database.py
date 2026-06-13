@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator
+from datetime import datetime
 
+from sqlalchemy import DateTime
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -14,7 +16,13 @@ from app.core.config import settings
 
 
 class Base(DeclarativeBase):
-    """Base class untuk semua ORM model."""
+    """Base class untuk semua ORM model.
+
+    Semua kolom `Mapped[datetime]` dipetakan ke TIMESTAMPTZ (timezone-aware)
+    sesuai BAB 4, supaya penulisan datetime tz-aware konsisten di seluruh app.
+    """
+
+    type_annotation_map = {datetime: DateTime(timezone=True)}
 
 
 engine = create_async_engine(

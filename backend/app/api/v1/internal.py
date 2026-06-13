@@ -2,7 +2,6 @@
 
 Rate limit 1000/min per default (slowapi by IP) sesuai BAB 12.3.
 """
-from __future__ import annotations
 
 import uuid
 
