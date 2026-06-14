@@ -109,6 +109,16 @@ async def send_notification(
     return NotificationSendResponse(inserted=inserted, fcm_attempted=fcm)
 
 
+@router.get("/config/news-sources")
+@limiter.limit(_RL)
+async def config_news_sources(request: Request):
+    """Active news/OSINT sources for WF-01 to fetch (CMS-managed)."""
+    from app.core import settings_store
+
+    sources = await settings_store.get_news_sources()
+    return {"sources": [s for s in sources if s.get("enabled", True)]}
+
+
 @router.get("/crises/active-ids", response_model=list[CrisisActiveId])
 @limiter.limit(_RL)
 async def crises_active_ids(

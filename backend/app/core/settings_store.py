@@ -75,6 +75,25 @@ async def invalidate() -> None:
         pass
 
 
+async def get_news_sources() -> list[dict]:
+    """CMS-editable news source list (falls back to curated defaults)."""
+    from app.core.news_sources import DEFAULT_NEWS_SOURCES
+
+    raw = await get("news_sources")
+    if raw:
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list) and parsed:
+                return parsed
+        except Exception:
+            logger.warning("news_sources JSON invalid; using defaults")
+    return DEFAULT_NEWS_SOURCES
+
+
+async def set_news_sources(sources: list[dict]) -> None:
+    await set_many({"news_sources": json.dumps(sources)})
+
+
 async def get_ai_config() -> dict:
     """Effective AI config (provider-resolved), cached in Redis."""
     try:

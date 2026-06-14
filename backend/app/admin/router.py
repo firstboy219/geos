@@ -251,6 +251,50 @@ async def user_tier(uid: str, tier: str = Form(...),
     return _redir("/admin/data", "Tier user diperbarui.")
 
 
+# ── News sources (CMS-managed feeds for WF-01) ──
+@router.get("/sources", response_class=HTMLResponse)
+async def sources_page(request: Request, _: bool = Depends(security.require_admin)):
+    sources = await settings_store.get_news_sources()
+    return templates.TemplateResponse("sources.html", _ctx(request, sources=sources))
+
+
+@router.post("/sources/add")
+async def sources_add(name: str = Form(...), url: str = Form(...), type: str = Form("rss"),
+                      credibility: float = Form(0.6), lang: str = Form("en"),
+                      _: bool = Depends(security.require_admin)):
+    sources = list(await settings_store.get_news_sources())
+    sources.append({"name": name.strip(), "url": url.strip(),
+                    "type": (type or "rss").strip(), "credibility": float(credibility),
+                    "lang": (lang or "en").strip(), "enabled": True})
+    await settings_store.set_news_sources(sources)
+    return _redir("/admin/sources", "Sumber ditambahkan.")
+
+
+@router.post("/sources/{idx}/toggle")
+async def sources_toggle(idx: int, _: bool = Depends(security.require_admin)):
+    sources = list(await settings_store.get_news_sources())
+    if 0 <= idx < len(sources):
+        sources[idx]["enabled"] = not sources[idx].get("enabled", True)
+        await settings_store.set_news_sources(sources)
+    return _redir("/admin/sources", "Sumber diperbarui.")
+
+
+@router.post("/sources/{idx}/delete")
+async def sources_delete(idx: int, _: bool = Depends(security.require_admin)):
+    sources = list(await settings_store.get_news_sources())
+    if 0 <= idx < len(sources):
+        sources.pop(idx)
+        await settings_store.set_news_sources(sources)
+    return _redir("/admin/sources", "Sumber dihapus.")
+
+
+@router.post("/sources/reset")
+async def sources_reset(_: bool = Depends(security.require_admin)):
+    from app.core.news_sources import DEFAULT_NEWS_SOURCES
+    await settings_store.set_news_sources(DEFAULT_NEWS_SOURCES)
+    return _redir("/admin/sources", "Sumber dikembalikan ke default.")
+
+
 # ── Monitoring ──
 @router.get("/monitor", response_class=HTMLResponse)
 async def monitor_page(request: Request, _: bool = Depends(security.require_admin),

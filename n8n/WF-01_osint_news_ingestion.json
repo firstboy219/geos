@@ -1,5 +1,5 @@
 {
-  "name": "WF-01 — OSINT News Ingestion",
+  "name": "WF-01 — OSINT News Ingestion (multi-source)",
   "nodes": [
     {
       "parameters": { "rule": { "interval": [ { "field": "minutes", "minutesInterval": 15 } ] } },
@@ -7,28 +7,65 @@
       "name": "Every 15 min",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [ -640, 300 ]
+      "position": [ -820, 300 ]
     },
     {
       "parameters": {
-        "url": "https://news.google.com/rss/search?q=geopolitical%20military%20sanctions%20naval%20territorial%20dispute&hl=en-US&gl=US&ceid=US:en",
-        "options": { "response": { "response": { "responseFormat": "text", "neverError": true } } }
+        "url": "http://geoscan-backend:8000/internal/config/news-sources",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
       },
-      "id": "rss",
-      "name": "Google News RSS (free)",
+      "id": "getsources",
+      "name": "Get news sources (CMS)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [ -420, 300 ]
+      "position": [ -600, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "geoscanIntKey01", "name": "geoscanInternalKey" } }
     },
     {
       "parameters": {
-        "jsCode": "// Parse Google News RSS XML -> articles[]\nconst xml = $input.first().json.data || $input.first().json.body || '';\nconst items = [...String(xml).matchAll(/<item>([\\s\\S]*?)<\\/item>/g)];\nconst seen = new Set();\nconst articles = [];\nfor (const m of items) {\n  const b = m[1];\n  const g = (re) => { const x = b.match(re); return x ? x[1] : ''; };\n  let title = g(/<title>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/title>/);\n  const link = g(/<link>([\\s\\S]*?)<\\/link>/).trim();\n  const pub = g(/<pubDate>([\\s\\S]*?)<\\/pubDate>/);\n  const src = g(/<source[^>]*>([\\s\\S]*?)<\\/source>/) || 'Google News';\n  title = title.replace(/<[^>]+>/g, '').trim();\n  if (!link || seen.has(link)) continue;\n  seen.add(link);\n  articles.push({ title, source_name: src.trim() || 'Google News', url: link, content_summary: title, published_at: pub ? new Date(pub).toISOString() : new Date().toISOString(), language: 'en', credibility_score: 0.6 });\n}\nreturn [{ json: { articles: articles.slice(0, 50) } }];"
+        "jsCode": "// one item per source\nconst s = $input.first().json.sources || [];\nreturn s.map(x => ({ json: x }));"
       },
-      "id": "parse",
-      "name": "Parse RSS",
+      "id": "split",
+      "name": "Split sources",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
+      "position": [ -400, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "User-Agent", "value": "Mozilla/5.0 (compatible; GeoscanBot/1.0)" } ] },
+        "options": { "redirect": { "redirect": {} }, "timeout": 12000, "response": { "response": { "responseFormat": "text", "neverError": true } } }
+      },
+      "id": "fetch",
+      "name": "Fetch feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [ -200, 300 ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse one feed (RSS <item> or Atom <entry>); src meta via paired item\nconst src = $('Split sources').item.json || {};\nconst xml = String($json.data || $json.body || '');\nconst dec = (s) => (s || '').replace(/<!\\[CDATA\\[/g, '').replace(/\\]\\]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#0?39;/g, \"'\").replace(/&quot;/g, '\\\"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').trim();\nconst blocks = (xml.match(/<(item|entry)\\b[\\s\\S]*?<\\/(item|entry)>/g)) || [];\nconst out = [];\nfor (const b of blocks) {\n  let title = dec((b.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/) || [])[1] || '');\n  let link = dec((b.match(/<link[^>]*>([\\s\\S]*?)<\\/link>/) || [])[1] || '');\n  if (!link) { const h = b.match(/<link[^>]*href=[\\\"']([^\\\"']+)[\\\"']/); link = h ? h[1] : ''; }\n  const pub = (b.match(/<(pubDate|published|updated)>([\\s\\S]*?)<\\/(pubDate|published|updated)>/) || [])[2] || '';\n  if (!title) continue;\n  let url = link;\n  if (src.type === 'trends') { url = 'trend://' + (src.name||'t') + '/' + encodeURIComponent(title) + '/' + new Date().toISOString().slice(0,10); title = 'Trending: ' + title; }\n  if (!url) continue;\n  let iso; try { iso = pub ? new Date(pub).toISOString() : new Date().toISOString(); } catch (e) { iso = new Date().toISOString(); }\n  out.push({ json: { title: title.slice(0,500), source_name: src.name || 'Unknown', url: String(url).slice(0,1000), content_summary: title.slice(0,500), published_at: iso, language: src.lang || 'en', credibility_score: src.credibility || 0.6 } });\n}\nreturn out;"
+      },
+      "id": "parse",
+      "name": "Parse feed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 0, 300 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// aggregate + dedupe by url across all sources\nconst seen = new Set();\nconst articles = [];\nfor (const it of $input.all()) {\n  const a = it.json;\n  if (!a || !a.url || seen.has(a.url)) continue;\n  seen.add(a.url);\n  if (articles.length < 150) articles.push(a);\n}\nreturn [{ json: { articles } }];"
+      },
+      "id": "agg",
+      "name": "Aggregate + dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 200, 300 ]
     },
     {
       "parameters": {
@@ -45,7 +82,7 @@
       "name": "POST /internal/news/ingest",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [ 20, 300 ],
+      "position": [ 400, 300 ],
       "credentials": { "httpHeaderAuth": { "id": "geoscanIntKey01", "name": "geoscanInternalKey" } }
     },
     {
@@ -53,14 +90,14 @@
         "conditions": {
           "options": { "caseSensitive": true, "typeValidation": "loose" },
           "combinator": "and",
-          "conditions": [ { "leftValue": "={{ $json.accepted }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } } ]
+          "conditions": [ { "leftValue": "={{ ($json.queued_ids || []).length }}", "rightValue": 0, "operator": { "type": "number", "operation": "gt" } } ]
         }
       },
-      "id": "if_ok",
-      "name": "Accepted > 0?",
+      "id": "ifq",
+      "name": "Queued > 0?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [ 240, 300 ]
+      "position": [ 620, 300 ]
     },
     {
       "parameters": {
@@ -77,16 +114,19 @@
       "name": "Trigger AI scan",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [ 460, 220 ],
+      "position": [ 840, 220 ],
       "credentials": { "httpHeaderAuth": { "id": "geoscanIntKey01", "name": "geoscanInternalKey" } }
     }
   ],
   "connections": {
-    "Every 15 min": { "main": [ [ { "node": "Google News RSS (free)", "type": "main", "index": 0 } ] ] },
-    "Google News RSS (free)": { "main": [ [ { "node": "Parse RSS", "type": "main", "index": 0 } ] ] },
-    "Parse RSS": { "main": [ [ { "node": "POST /internal/news/ingest", "type": "main", "index": 0 } ] ] },
-    "POST /internal/news/ingest": { "main": [ [ { "node": "Accepted > 0?", "type": "main", "index": 0 } ] ] },
-    "Accepted > 0?": { "main": [ [ { "node": "Trigger AI scan", "type": "main", "index": 0 } ], [] ] }
+    "Every 15 min": { "main": [ [ { "node": "Get news sources (CMS)", "type": "main", "index": 0 } ] ] },
+    "Get news sources (CMS)": { "main": [ [ { "node": "Split sources", "type": "main", "index": 0 } ] ] },
+    "Split sources": { "main": [ [ { "node": "Fetch feed", "type": "main", "index": 0 } ] ] },
+    "Fetch feed": { "main": [ [ { "node": "Parse feed", "type": "main", "index": 0 } ] ] },
+    "Parse feed": { "main": [ [ { "node": "Aggregate + dedupe", "type": "main", "index": 0 } ] ] },
+    "Aggregate + dedupe": { "main": [ [ { "node": "POST /internal/news/ingest", "type": "main", "index": 0 } ] ] },
+    "POST /internal/news/ingest": { "main": [ [ { "node": "Queued > 0?", "type": "main", "index": 0 } ] ] },
+    "Queued > 0?": { "main": [ [ { "node": "Trigger AI scan", "type": "main", "index": 0 } ], [] ] }
   },
   "settings": { "executionOrder": "v1" }
 }

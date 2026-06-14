@@ -21,7 +21,7 @@
   <div class="flex min-h-screen">
     <aside class="w-56 shrink-0 bg-surface border-r border-border p-4 flex flex-col gap-1">
       <div class="text-lg font-semibold mb-4 px-2">GEO<span class="text-accent">SCAN</span> <span class="text-xs text-textMuted">CMS</span></div>
-      {% set nav = [('/admin','Dashboard'),('/admin/settings','AI & Credentials'),('/admin/data','Data'),('/admin/monitor','Monitor')] %}
+      {% set nav = [('/admin','Dashboard'),('/admin/settings','AI & Credentials'),('/admin/sources','Sumber Berita'),('/admin/data','Data'),('/admin/monitor','Monitor')] %}
       {% for href,label in nav %}
         <a href="{{ href }}" class="px-3 py-2 rounded-lg text-sm {% if request.url.path == href or (href!='/admin' and request.url.path.startswith(href)) %}bg-accentDark text-accent{% else %}text-textSecondary hover:bg-borderSubtle{% endif %}">{{ label }}</a>
       {% endfor %}
