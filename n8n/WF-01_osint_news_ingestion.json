@@ -25,7 +25,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// one item per source\nconst s = $input.first().json.sources || [];\nreturn s.map(x => ({ json: x }));"
+        "jsCode": "const s = $input.first().json.sources || [];\nreturn s.map(x => ({ json: x }));"
       },
       "id": "split",
       "name": "Split sources",
@@ -49,7 +49,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Parse one feed (RSS <item> or Atom <entry>); src meta via paired item\nconst src = $('Split sources').item.json || {};\nconst xml = String($json.data || $json.body || '');\nconst dec = (s) => (s || '').replace(/<!\\[CDATA\\[/g, '').replace(/\\]\\]>/g, '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#0?39;/g, \"'\").replace(/&quot;/g, '\\\"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').trim();\nconst blocks = (xml.match(/<(item|entry)\\b[\\s\\S]*?<\\/(item|entry)>/g)) || [];\nconst out = [];\nfor (const b of blocks) {\n  let title = dec((b.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/) || [])[1] || '');\n  let link = dec((b.match(/<link[^>]*>([\\s\\S]*?)<\\/link>/) || [])[1] || '');\n  if (!link) { const h = b.match(/<link[^>]*href=[\\\"']([^\\\"']+)[\\\"']/); link = h ? h[1] : ''; }\n  const pub = (b.match(/<(pubDate|published|updated)>([\\s\\S]*?)<\\/(pubDate|published|updated)>/) || [])[2] || '';\n  if (!title) continue;\n  let url = link;\n  if (src.type === 'trends') { url = 'trend://' + (src.name||'t') + '/' + encodeURIComponent(title) + '/' + new Date().toISOString().slice(0,10); title = 'Trending: ' + title; }\n  if (!url) continue;\n  let iso; try { iso = pub ? new Date(pub).toISOString() : new Date().toISOString(); } catch (e) { iso = new Date().toISOString(); }\n  out.push({ json: { title: title.slice(0,500), source_name: src.name || 'Unknown', url: String(url).slice(0,1000), content_summary: title.slice(0,500), published_at: iso, language: src.lang || 'en', credibility_score: src.credibility || 0.6 } });\n}\nreturn out;"
+        "jsCode": "// Parse one feed (RSS <item>/Atom <entry>). Bluesky/Mastodon posts have no <title> -> fall back to <description>/<content>.\nconst src = $('Split sources').item.json || {};\nconst xml = String($json.data || $json.body || '');\nconst dec = (s) => (s || '').replace(/<!\\[CDATA\\[/g, '').replace(/\\]\\]>/g, '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#0?39;/g, \"'\").replace(/&quot;/g, '\\\"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/\\s+/g, ' ').trim();\nconst blocks = (xml.match(/<(item|entry)\\b[\\s\\S]*?<\\/(item|entry)>/g)) || [];\nconst out = [];\nfor (const b of blocks) {\n  let title = dec((b.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/) || [])[1] || '');\n  const desc = dec((b.match(/<description[^>]*>([\\s\\S]*?)<\\/description>/) || [])[1] || (b.match(/<(content|summary)[^>]*>([\\s\\S]*?)<\\/(content|summary)>/) || [])[2] || '');\n  if (!title) title = desc;\n  let link = dec((b.match(/<link[^>]*>([\\s\\S]*?)<\\/link>/) || [])[1] || '');\n  if (!link) { const h = b.match(/<link[^>]*href=[\\\"']([^\\\"']+)[\\\"']/); link = h ? h[1] : ''; }\n  const pub = (b.match(/<(pubDate|published|updated)>([\\s\\S]*?)<\\/(pubDate|published|updated)>/) || [])[2] || '';\n  if (!title) continue;\n  let url = link;\n  if (src.type === 'trends') { url = 'trend://' + (src.name || 't') + '/' + encodeURIComponent(title) + '/' + new Date().toISOString().slice(0,10); title = 'Trending: ' + title; }\n  if (!url) continue;\n  let iso; try { iso = pub ? new Date(pub).toISOString() : new Date().toISOString(); } catch (e) { iso = new Date().toISOString(); }\n  out.push({ json: { title: title.slice(0,500), source_name: src.name || 'Unknown', url: String(url).slice(0,1000), content_summary: (desc || title).slice(0,500), published_at: iso, language: src.lang || 'en', credibility_score: src.credibility || 0.6 } });\n}\nreturn out;"
       },
       "id": "parse",
       "name": "Parse feed",
@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// aggregate + dedupe by url across all sources\nconst seen = new Set();\nconst articles = [];\nfor (const it of $input.all()) {\n  const a = it.json;\n  if (!a || !a.url || seen.has(a.url)) continue;\n  seen.add(a.url);\n  if (articles.length < 150) articles.push(a);\n}\nreturn [{ json: { articles } }];"
+        "jsCode": "const seen = new Set();\nconst articles = [];\nfor (const it of $input.all()) {\n  const a = it.json;\n  if (!a || !a.url || seen.has(a.url)) continue;\n  seen.add(a.url);\n  if (articles.length < 150) articles.push(a);\n}\nreturn [{ json: { articles } }];"
       },
       "id": "agg",
       "name": "Aggregate + dedupe",
