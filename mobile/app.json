@@ -30,7 +30,8 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -67,6 +68,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "intilimagroup",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9e2c6d57-f8e4-43d2-a1b9-1897d3d9140f"
+      }
     }
   }
 }

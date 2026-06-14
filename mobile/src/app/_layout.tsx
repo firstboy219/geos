@@ -1,52 +1,44 @@
 import "../../global.css";
-import {
-  DarkTheme,
-  ThemeProvider,
-  type Theme,
-} from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { colors } from '@/theme';
-import { Providers } from '@/state';
+import { colors } from "@/theme";
+import { Providers } from "@/state";
 
-/** Navigation theme tinted with the Geoscan dark palette. */
-const navTheme: Theme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: colors.background,
-    card: colors.surface,
-    border: colors.border,
-    text: colors.textPrimary,
-    primary: colors.accent,
-    notification: colors.danger,
-  },
+// SDK 56: expo-router no longer uses @react-navigation/native theming.
+// We theme the navigator directly via Stack screenOptions (dark palette).
+const headerOptions = {
+  headerShown: true as const,
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.textPrimary,
+  headerTitleStyle: { color: colors.textPrimary },
+  contentStyle: { backgroundColor: colors.background },
 };
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Providers>
-        <ThemeProvider value={navTheme}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="vectors/[crisisId]" options={{ headerShown: true, title: 'Vector' }} />
-            <Stack.Screen
-              name="portfolio/impact"
-              options={{ headerShown: true, title: 'Portfolio Impact' }}
-            />
-          </Stack>
-        </ThemeProvider>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="vectors/[crisisId]"
+            options={{ ...headerOptions, title: "Impact Vector" }}
+          />
+          <Stack.Screen
+            name="portfolio/impact"
+            options={{ ...headerOptions, title: "Dampak Portofolio" }}
+          />
+        </Stack>
       </Providers>
     </GestureHandlerRootView>
   );
