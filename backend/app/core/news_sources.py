@@ -29,5 +29,14 @@ DEFAULT_NEWS_SOURCES: list[dict] = [
     {"name": "Google Trends ID", "url": "https://trends.google.com/trending/rss?geo=ID", "type": "trends", "credibility": 0.45, "lang": "id", "enabled": True},
     {"name": "Google Trends US", "url": "https://trends.google.com/trending/rss?geo=US", "type": "trends", "credibility": 0.45, "lang": "en", "enabled": True},
     {"name": "YouTube · Al Jazeera English", "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCNye-wNBqNL5ZzHSJj3l8Bg", "type": "atom", "credibility": 0.5, "lang": "en", "enabled": True},
-    # X/Twitter: no free feed. Add here via CMS with an RSS-bridge/API URL when available.
+    # ── Social media (Bluesky native RSS + Mastodon — only free bridges that work from a datacenter) ──
+    {"name": "Bluesky · Reuters", "url": "https://bsky.app/profile/reuters.com/rss", "type": "rss", "credibility": 0.75, "lang": "en", "enabled": True},
+    {"name": "Bluesky · AP", "url": "https://bsky.app/profile/apnews.com/rss", "type": "rss", "credibility": 0.75, "lang": "en", "enabled": True},
+    {"name": "Bluesky · AFP", "url": "https://bsky.app/profile/afp.com/rss", "type": "rss", "credibility": 0.75, "lang": "en", "enabled": True},
+    {"name": "Bluesky · Al Jazeera", "url": "https://bsky.app/profile/aljazeera.com/rss", "type": "rss", "credibility": 0.7, "lang": "en", "enabled": True},
+    {"name": "Bluesky · Bellingcat (OSINT)", "url": "https://bsky.app/profile/bellingcat.com/rss", "type": "rss", "credibility": 0.7, "lang": "en", "enabled": True},
+    {"name": "Bluesky · Bloomberg", "url": "https://bsky.app/profile/bloomberg.com/rss", "type": "rss", "credibility": 0.7, "lang": "en", "enabled": True},
+    {"name": "Mastodon · DW", "url": "https://flipboard.social/@dw.rss", "type": "rss", "credibility": 0.7, "lang": "en", "enabled": True},
+    # X/Twitter: no working free bridge from a datacenter IP (Nitter dead, public RSSHub/openrss blocked).
+    # To add X: self-host RSSHub with Twitter auth, or a paid bridge (rss.app / RapidAPI), then add the URL here via the CMS.
 ]
