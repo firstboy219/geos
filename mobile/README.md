@@ -1,107 +1,56 @@
-# Geoscan Mobile (Flutter)
+# Welcome to your Expo app 👋
 
-Phase 1 foundation: design system, services, routing, and authentication for the
-Geoscan Intelligence System. Built mobile-first with a dark, Bloomberg-style UI.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-> Flutter SDK is **not** installed in the authoring environment. Run the commands
-> below on a machine with Flutter `>=3.2.0 <4.0.0` installed.
+## Get started
 
-## Getting started
+1. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+2. Start the app
+
+   ```bash
+   npx expo start
+   ```
+
+In the output, you'll find options to open the app in a
+
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+
+## Get a fresh project
+
+When you're ready, run:
 
 ```bash
-cd mobile
-flutter pub get
-flutter run        # Android emulator hits the backend at http://10.0.2.2:8000
+npm run reset-project
 ```
 
-The Android runner config under `android/` and iOS config under `ios/` are
-minimal stubs. If a build complains about missing native scaffolding, regenerate
-the platform folders without touching `lib/`:
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-```bash
-flutter create --platforms=android,ios --org online.cosger .
-```
+### Other setup steps
 
-## Architecture
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
-```
-lib/
-  main.dart                 # composition root → runApp(GeoscanApp(...))
-  app.dart                  # GeoscanApp: MaterialApp.router, dark theme, providers, locale
-  core/
-    theme/                  # app_colors, app_text_styles, app_theme (BAB 7.1 / 7.2 / 7.3)
-    constants/              # api_constants (BAB 5), app_constants (spacing/radii/durations)
-    services/               # api_service (Dio), auth_service (secure storage), storage_service (prefs)
-    router/                 # app_router (GoRouter, BAB 7.4)
-    models/                 # user_model
-    l10n/                   # app_strings (EN/ID map) + LocaleProvider
-    widgets/                # reusable components (see below)
-  features/
-    auth/                   # splash, login, register screens + AuthProvider
-    home/                   # main_nav_screen (bottom nav shell) + home_screen
-    pasar/ vectors/ portfolio/ account/   # placeholder screens for Phase 2
-```
+## Learn more
 
-### Design system (BAB 7 — authoritative)
+To learn more about developing your project with Expo, look at the following resources:
 
-- **Colors**: every token from BAB 7.1 lives in `core/theme/app_colors.dart`.
-- **Typography**: every style from BAB 7.2 lives in `core/theme/app_text_styles.dart`.
-- **Component rules** (BAB 7.3): card radius 14/12/10, chip radius 20/8, border
-  0.5dp (1.5dp emphasis), spacing multiples of 4 — all in
-  `core/constants/app_constants.dart`.
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
-### Reusable widgets (for Phase 2 screens)
+## Join the community
 
-Import the barrel: `import 'package:geoscan/core/widgets/widgets.dart';`
+Join our community of developers creating universal apps.
 
-| Widget | Purpose |
-| --- | --- |
-| `GeoCard` | Standard surface card (radius/border/padding presets, `onTap`, `emphasis`). |
-| `GeoChip` | Pill/square chip with `selected` state, leading icon. |
-| `SectionHeader` | Section title + optional "see all" action. |
-| `LoadingShimmer` | Shimmer skeleton (`.box`, `.list`) — required on data screens (BAB 7.3). |
-| `ErrorRetry` | Friendly error state + retry button. |
-| `EmptyState` | Icon + description + optional action. |
-| `RiskPill` | Risk-level pill (low/medium/high/critical) with `levelFrom()` EN/ID mapping. |
-| `LayerChip` | AI-layer chip (code + label) with tap-to-reveal tooltip. |
-| `GeoLogo` | "GEOSCAN" wordmark (GEO white / SCAN blue), `scale` param. |
-
-### Networking & auth
-
-- `ApiService` (Dio): base URL + 30s timeouts, Bearer interceptor, `401 →
-  refresh → retry` once, force-logout on refresh failure (`onForceLogout`).
-- `AuthService`: JWT storage via `flutter_secure_storage`.
-- `AuthProvider` (Provider/ChangeNotifier): `login`, `register`, `refreshToken`,
-  `logout`, `loadCurrentUser`; exposes `isLoading`, `error`, `currentUser`.
-
-### Routing (BAB 7.4)
-
-`/` (splash) · `/login` · `/register` · `/home` (bottom-nav shell) ·
-`/pasar` · `/vectors` · `/vectors/:crisisId` · `/portfolio` ·
-`/portfolio/impact` · `/account` · `/account/notifications` ·
-`/account/tripwire` · `/account/billing`.
-
-Redirect: no token → `/login` for every non-auth route.
-
-### Localization
-
-Simple manual EN/ID string map in `core/l10n/app_strings.dart`
-(`AppStrings.of(context).t('key')`) + `LocaleProvider` toggle persisted to
-`SharedPreferences`. Migrate to gen-l10n/ARB in a later phase if string volume
-grows.
-
-## API base URL
-
-`ApiConstants.baseUrl = 'http://10.0.2.2:8000'` (Android emulator → host:8000).
-Production is `https://apigeo.cosger.online`. iOS simulator should use
-`http://localhost:8000`.
-
-## Notes / packages wished for
-
-- All requested packages are included. No additional packages were needed for
-  Phase 1.
-- For Phase 6 (live data) consider `flutter_riverpod` only if Provider becomes
-  unwieldy — current scope is fine with `provider`.
-- Push notifications (FCM) and the `fcm_token` field on `PATCH /users/me` will
-  need `firebase_core` + `firebase_messaging` in a later phase (not added now,
-  per the "no extra packages" rule).
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
