@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     GEMINI_MODEL_ANALYSIS: str = "gemini-2.5-flash"
     GEMINI_MODEL_EMBEDDING: str = "gemini-embedding-001"
     PINECONE_API_KEY: str = ""
+    # Vector store = self-hosted Qdrant (container). PINECONE_INDEX_NAME is reused
+    # as the Qdrant collection name; PINECONE_DIMENSION as the vector size.
+    QDRANT_URL: str = "http://geoscan-qdrant:6333"
     PINECONE_INDEX_NAME: str = "geoscan-historical"
     # Embedding dimension. gemini-embedding-001 supports MRL truncation; we use
     # 1536 to keep the Pinecone index dimension unchanged from the original spec.
