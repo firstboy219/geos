@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}AI & Credentials · Geoscan CMS{% endblock %}
+{% block content %}
+{% macro field(label, name, value) %}
+<div>
+  <label class="block text-sm text-textSecondary mb-1">{{ label }}</label>
+  <input name="{{ name }}" value="{{ value }}" class="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-accent" />
+</div>
+{% endmacro %}
+{% macro secret(label, name, state) %}
+<div>
+  <label class="block text-sm text-textSecondary mb-1">{{ label }}
+    {% if state == 'set' %}<span class="text-success text-xs">● tersimpan</span>{% else %}<span class="text-danger text-xs">● belum diisi</span>{% endif %}
+  </label>
+  <input name="{{ name }}" type="password" placeholder="{{ 'biarkan kosong untuk pertahankan' if state=='set' else 'masukkan key' }}"
+         class="w-full bg-background border border-border rounded-lg px-3 py-2 outline-none focus:border-accent" />
+</div>
+{% endmacro %}
+
+<h1 class="text-xl font-semibold mb-4">AI & Credentials</h1>
+
+<form method="post" action="/admin/settings" x-data="{ provider: '{{ values.ai_provider or 'gemini' }}' }" class="space-y-6">
+  <div class="bg-surface border border-border rounded-xl p-5">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-sm font-medium">Konfigurasi AI</div>
+      <span class="text-xs text-textMuted">aktif: {{ ai.provider }} / {{ ai.analysis_model }}</span>
+    </div>
+
+    <label class="block text-sm text-textSecondary mb-1">Provider</label>
+    <select name="ai_provider" x-model="provider" class="w-full bg-background border border-border rounded-lg px-3 py-2 mb-4 outline-none focus:border-accent">
+      <option value="gemini">Google Gemini</option>
+      <option value="openai">OpenAI</option>
+    </select>
+
+    <div x-show="provider==='gemini'" class="space-y-3">
+      {{ field('Model analisis (Gemini)','ai_model_analysis', values.ai_model_analysis) }}
+      {{ field('Model embedding (Gemini)','ai_model_embedding', values.ai_model_embedding) }}
+      {{ secret('Gemini API key','gemini_api_key', values.gemini_api_key) }}
+    </div>
+
+    <div x-show="provider==='openai'" class="space-y-3" style="display:none">
+      {{ field('Model analisis (OpenAI)','openai_model_analysis', values.openai_model_analysis) }}
+      {{ field('Model embedding (OpenAI)','openai_model_embedding', values.openai_model_embedding) }}
+      {{ secret('OpenAI API key','openai_api_key', values.openai_api_key) }}
+    </div>
+
+    <div class="mt-3">{{ field('Embedding dimension','ai_embedding_dimension', values.ai_embedding_dimension) }}</div>
+    <p class="text-xs text-textMuted mt-2">Catatan: mengubah dimension butuh re-seed Qdrant (seed_historical_data).</p>
+  </div>
+
+  <div class="bg-surface border border-border rounded-xl p-5 space-y-3">
+    <div class="text-sm font-medium mb-2">Integrasi</div>
+    {{ field('Qdrant URL','qdrant_url', values.qdrant_url) }}
+    {{ field('n8n webhook URL','n8n_webhook_url', values.n8n_webhook_url) }}
+  </div>
+
+  <div class="flex gap-2">
+    <button class="bg-accent text-white rounded-lg px-4 py-2 text-sm font-medium">Simpan</button>
+    <button formaction="/admin/settings/test-ai" formmethod="post" class="bg-surface border border-border rounded-lg px-4 py-2 text-sm">Test AI</button>
+  </div>
+</form>
+
+<form method="post" action="/admin/settings/password" class="bg-surface border border-border rounded-xl p-5 mt-6 max-w-md">
+  <div class="text-sm font-medium mb-3">Ubah password admin</div>
+  <input name="new_password" type="password" placeholder="Password baru (min 6)" required
+         class="w-full bg-background border border-border rounded-lg px-3 py-2 mb-3 outline-none focus:border-accent" />
+  <button class="bg-surface border border-border rounded-lg px-4 py-2 text-sm">Update password</button>
+</form>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Monitor · Geoscan CMS{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Monitor</h1>
+<div class="grid md:grid-cols-2 gap-4">
+
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">News articles ({{ news|length }})</div>
+    <div class="space-y-2 max-h-96 overflow-y-auto text-sm">
+      {% for a in news %}
+        <div class="border-b border-borderSubtle pb-1.5">
+          <div class="text-textPrimary">{{ a.title[:90] }}</div>
+          <div class="text-xs text-textMuted">{{ a.source_name or '-' }} · {{ a.ingested_at.strftime('%m-%d %H:%M') if a.ingested_at else '' }} · cred {{ '%.0f'|format((a.credibility_score or 0)*100) }}%</div>
+        </div>
+      {% else %}<div class="text-textMuted">Belum ada.</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">Market data ({{ market|length }})</div>
+    <table class="w-full text-sm">
+      <thead class="text-textMuted text-xs text-left"><tr><th class="py-1">Symbol</th><th class="text-right">Price</th><th class="text-right">Δ%</th><th class="text-right">Waktu</th></tr></thead>
+      <tbody>
+        {% for m in market %}
+        <tr class="border-t border-borderSubtle"><td class="py-1">{{ m.symbol }}</td><td class="text-right">{{ '%.2f'|format(m.price) }}</td>
+        <td class="text-right {% if (m.change_pct or 0) >= 0 %}text-success{% else %}text-danger{% endif %}">{{ '%.2f'|format(m.change_pct or 0) }}</td>
+        <td class="text-right text-textMuted text-xs">{{ m.recorded_at.strftime('%m-%d %H:%M') if m.recorded_at else '' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-textMuted py-1">Belum ada.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">Tripwire events ({{ events|length }})</div>
+    <div class="space-y-2 max-h-96 overflow-y-auto text-sm">
+      {% for e in events %}
+        <div class="border-b border-borderSubtle pb-1.5 flex justify-between">
+          <span class="text-textSecondary">{{ e.detected_at.strftime('%m-%d %H:%M') if e.detected_at else '' }}</span>
+          <span class="text-warning">conf {{ '%.2f'|format(e.confidence or 0) }}</span>
+        </div>
+      {% else %}<div class="text-textMuted">Belum ada.</div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">Alerts ({{ alerts|length }})</div>
+    <div class="space-y-2 max-h-96 overflow-y-auto text-sm">
+      {% for al in alerts %}
+        <div class="border-b border-borderSubtle pb-1.5">
+          <div class="text-textPrimary">{{ al.title }}</div>
+          <div class="text-xs text-textMuted">{{ al.type or '-' }} · {{ al.severity or '-' }} · {{ al.created_at.strftime('%m-%d %H:%M') if al.created_at else '' }}</div>
+        </div>
+      {% else %}<div class="text-textMuted">Belum ada.</div>{% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -61,6 +61,15 @@ class Settings(BaseSettings):
     # 1536 to keep the Pinecone index dimension unchanged from the original spec.
     PINECONE_DIMENSION: int = 1536
 
+    # ── AI provider switch (CMS-overridable) ──
+    AI_PROVIDER: str = "gemini"  # gemini | openai
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL_ANALYSIS: str = "gpt-4o-mini"
+    OPENAI_MODEL_EMBEDDING: str = "text-embedding-3-small"
+
+    # ── Admin / CMS ──
+    ADMIN_PASSWORD: str = ""  # bootstrap admin password (settable later from CMS)
+
     # ── Observability (Phase 7) ──
     SENTRY_DSN: str = ""
 

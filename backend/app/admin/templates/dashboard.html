@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Geoscan CMS{% endblock %}
+{% block content %}
+<h1 class="text-xl font-semibold mb-4">Dashboard</h1>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+  {% for label,key in [('Users','users'),('Crises','crises'),('Scenarios','scenarios'),('Tripwires','tripwires'),('Tripwire events','tripwire_events'),('News articles','news_articles'),('Market rows','market_data'),('Mutations','mutations')] %}
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-2xl font-semibold">{{ counts[key] }}</div>
+    <div class="text-xs text-textMuted mt-1">{{ label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">Kesehatan Sistem</div>
+    {% for label,ok in [('Database',health.db),('Redis',health.redis)] %}
+      <div class="flex items-center justify-between py-1 text-sm">
+        <span class="text-textSecondary">{{ label }}</span>
+        <span class="{% if ok %}text-success{% else %}text-danger{% endif %}">{{ 'OK' if ok else 'DOWN' }}</span>
+      </div>
+    {% endfor %}
+    <div class="flex items-center justify-between py-1 text-sm">
+      <span class="text-textSecondary">Celery workers</span>
+      <span class="{% if health.celery_workers>0 %}text-success{% else %}text-danger{% endif %}">{{ health.celery_workers }}</span>
+    </div>
+  </div>
+
+  <div class="bg-surface border border-border rounded-xl p-4">
+    <div class="text-sm font-medium mb-3">AI Engine aktif</div>
+    <div class="flex justify-between py-1 text-sm"><span class="text-textSecondary">Provider</span><span class="text-accent">{{ ai.provider }}</span></div>
+    <div class="flex justify-between py-1 text-sm"><span class="text-textSecondary">Model analisis</span><span>{{ ai.analysis_model }}</span></div>
+    <div class="flex justify-between py-1 text-sm"><span class="text-textSecondary">Model embedding</span><span>{{ ai.embedding_model }}</span></div>
+    <div class="flex justify-between py-1 text-sm"><span class="text-textSecondary">Dimension</span><span>{{ ai.embedding_dimension }}</span></div>
+    <a href="/admin/settings" class="inline-block mt-3 text-xs text-accent">Ubah konfigurasi AI →</a>
+  </div>
+</div>
+
+<div class="bg-surface border border-border rounded-xl p-4 mt-4">
+  <div class="text-sm font-medium mb-3">Mutasi skenario terbaru</div>
+  {% if recent %}
+  <table class="w-full text-sm">
+    <thead class="text-textMuted text-xs"><tr class="text-left"><th class="py-1">Waktu</th><th>Alasan</th><th class="text-right">Lama→Baru</th></tr></thead>
+    <tbody>
+      {% for m in recent %}
+      <tr class="border-t border-borderSubtle">
+        <td class="py-1.5 text-textSecondary">{{ m.mutated_at.strftime('%Y-%m-%d %H:%M') if m.mutated_at else '-' }}</td>
+        <td class="text-textSecondary">{{ m.reason }}</td>
+        <td class="text-right">{{ '%.0f'|format((m.old_probability or 0)*100) }}% → <span class="text-accent">{{ '%.0f'|format((m.new_probability or 0)*100) }}%</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<div class="text-textMuted text-sm">Belum ada mutasi.</div>{% endif %}
+</div>
+{% endblock %}

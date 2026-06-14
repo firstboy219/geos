@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% set hide_nav = true %}
+{% block title %}Login · Geoscan CMS{% endblock %}
+{% block bare %}
+<div class="min-h-screen flex items-center justify-center px-4">
+  <form method="post" action="/admin/login" class="w-full max-w-sm bg-surface border border-border rounded-2xl p-6">
+    <div class="text-2xl font-semibold text-center mb-1">GEO<span class="text-accent">SCAN</span></div>
+    <div class="text-center text-textMuted text-xs mb-6">Control Panel</div>
+    {% if error %}<div class="mb-3 px-3 py-2 rounded-lg text-sm text-danger" style="background:#3D1010;border:0.5px solid #5C1C1C">{{ error }}</div>{% endif %}
+    <label class="block text-sm text-textSecondary mb-1">Password admin</label>
+    <input name="password" type="password" autofocus required
+           class="w-full bg-background border border-border rounded-lg px-3 py-2 mb-4 outline-none focus:border-accent" />
+    <button class="w-full bg-accent text-white rounded-lg py-2 font-medium">Masuk</button>
+  </form>
+</div>
+{% endblock %}

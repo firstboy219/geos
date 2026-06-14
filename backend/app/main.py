@@ -78,6 +78,11 @@ setup_metrics(app)
 # ── Routers ──
 app.include_router(api_router)
 
+# ── Admin CMS (server-rendered /admin) ──
+from app.admin.router import router as admin_router  # noqa: E402
+
+app.include_router(admin_router)
+
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:

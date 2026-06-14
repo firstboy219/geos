@@ -1,6 +1,7 @@
 """Import semua model agar Alembic autogenerate & metadata melihat tabel."""
 from app.models.actor import Actor
 from app.models.alert import Alert
+from app.models.app_setting import AppSetting
 from app.models.crisis import Crisis
 from app.models.crisis_actor import CrisisActor
 from app.models.market_data import MarketData
@@ -15,6 +16,7 @@ from app.models.user_portfolio import UserPortfolio
 __all__ = [
     "Actor",
     "Alert",
+    "AppSetting",
     "Crisis",
     "CrisisActor",
     "MarketData",

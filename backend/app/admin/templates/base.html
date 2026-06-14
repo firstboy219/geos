@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Geoscan CMS{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: {
+      background:'#0D1117', surface:'#161B22', surfaceAlt:'#0D1117', border:'#30363D',
+      borderSubtle:'#21262D', textPrimary:'#F0F6FC', textSecondary:'#8B949E', textMuted:'#6E7681',
+      accent:'#4493F8', accentDark:'#0D2044', success:'#3FB950', warning:'#E3B341',
+      danger:'#F85149', purple:'#9B59B6' } } } };
+  </script>
+  <script defer src="https://unpkg.com/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+<body class="bg-background text-textPrimary min-h-screen">
+{% if hide_nav %}
+  {% block bare %}{% endblock %}
+{% else %}
+  <div class="flex min-h-screen">
+    <aside class="w-56 shrink-0 bg-surface border-r border-border p-4 flex flex-col gap-1">
+      <div class="text-lg font-semibold mb-4 px-2">GEO<span class="text-accent">SCAN</span> <span class="text-xs text-textMuted">CMS</span></div>
+      {% set nav = [('/admin','Dashboard'),('/admin/settings','AI & Credentials'),('/admin/data','Data'),('/admin/monitor','Monitor')] %}
+      {% for href,label in nav %}
+        <a href="{{ href }}" class="px-3 py-2 rounded-lg text-sm {% if request.url.path == href or (href!='/admin' and request.url.path.startswith(href)) %}bg-accentDark text-accent{% else %}text-textSecondary hover:bg-borderSubtle{% endif %}">{{ label }}</a>
+      {% endfor %}
+      <a href="/admin/logout" class="mt-auto px-3 py-2 rounded-lg text-sm text-danger hover:bg-borderSubtle">Keluar</a>
+    </aside>
+    <main class="flex-1 p-6 max-w-6xl">
+      {% if msg %}
+        <div class="mb-4 px-4 py-2 rounded-lg text-sm border {% if msg_type=='err' %}bg-dangerDark border-danger text-danger{% else %}bg-successDark border-success text-success{% endif %}" style="{% if msg_type=='err' %}background:#3D1010;border-color:#5C1C1C{% else %}background:#0D2818;border-color:#1A4D2E{% endif %}">{{ msg }}</div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+{% endif %}
+</body>
+</html>
