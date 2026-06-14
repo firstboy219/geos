@@ -2,39 +2,44 @@
   "name": "WF-05 — Market Data Sync",
   "nodes": [
     {
-      "parameters": {
-        "rule": { "interval": [ { "field": "hours", "hoursInterval": 1 } ] }
-      },
+      "parameters": { "rule": { "interval": [ { "field": "hours", "hoursInterval": 1 } ] } },
       "id": "schedule",
       "name": "Every 1 hour",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [ -640, 300 ]
+      "position": [ -680, 300 ]
     },
     {
       "parameters": {
-        "url": "https://query1.finance.yahoo.com/v7/finance/quote",
-        "sendQuery": true,
-        "queryParameters": { "parameters": [
-          { "name": "symbols", "value": "^JKSE,GC=F,CL=F,IDR=X,CNY=X,BTC-USD,ETH-USD" }
-        ] },
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true",
         "options": { "response": { "response": { "neverError": true } } }
       },
-      "id": "quotes",
-      "name": "Yahoo Finance quotes",
+      "id": "cg",
+      "name": "CoinGecko (crypto)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [ -420, 300 ]
+      "position": [ -460, 300 ]
     },
     {
       "parameters": {
-        "jsCode": "// Normalize Yahoo quoteResponse → market rows\nconst res = ($json.quoteResponse && $json.quoteResponse.result) || [];\nconst rows = res.map(q => ({\n  symbol: q.symbol,\n  price: q.regularMarketPrice ?? 0,\n  change_pct: q.regularMarketChangePercent ?? 0,\n  volume: q.regularMarketVolume ?? 0,\n  timestamp: new Date().toISOString()\n}));\nreturn [{ json: { data: rows } }];"
+        "url": "https://open.er-api.com/v6/latest/USD",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "id": "fx",
+      "name": "FX (er-api)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ -240, 300 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine CoinGecko + FX into market rows\nconst cg = $('CoinGecko (crypto)').first().json || {};\nconst fx = $('FX (er-api)').first().json || {};\nconst now = new Date().toISOString();\nconst rows = [];\nconst push = (symbol, price, chg) => { if (price != null && !isNaN(price)) rows.push({ symbol, price: Number(price), change_pct: Number((chg || 0).toFixed ? chg.toFixed(2) : chg) || 0, volume: 0, timestamp: now }); };\nif (cg.bitcoin) push('BTC-USD', cg.bitcoin.usd, cg.bitcoin.usd_24h_change);\nif (cg.ethereum) push('ETH-USD', cg.ethereum.usd, cg.ethereum.usd_24h_change);\nconst r = fx.rates || {};\nif (r.IDR) push('USD/IDR', r.IDR, 0);\nif (r.CNY) push('USD/CNY', r.CNY, 0);\nif (r.JPY) push('USD/JPY', r.JPY, 0);\nreturn [{ json: { data: rows } }];"
       },
       "id": "norm",
       "name": "Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [ -200, 300 ]
+      "position": [ -20, 300 ]
     },
     {
       "parameters": {
@@ -44,52 +49,22 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ { \"data\": $json.data } }}",
+        "jsonBody": "={{ $json.data }}",
         "options": {}
       },
       "id": "update",
       "name": "POST /internal/market/update",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [ 20, 300 ],
-      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Emit one item per BIG move (|change_pct| > 3) as a signal article\nconst rows = $('Normalize').first().json.data || [];\nconst out = [];\nfor (const r of rows) {\n  if (Math.abs(r.change_pct) > 3) {\n    out.push({ json: {\n      title: `Market Alert: ${r.symbol} moved ${r.change_pct.toFixed(2)}%`,\n      source_name: 'Geoscan Market',\n      url: `geoscan://market/${r.symbol}/${Date.now()}`,\n      content_summary: `${r.symbol} bergerak ${r.change_pct.toFixed(2)}% ke ${r.price}.`,\n      published_at: new Date().toISOString(),\n      language: 'en',\n      credibility_score: 0.9\n    }});\n  }\n}\nreturn out;"
-      },
-      "id": "bigmoves",
-      "name": "Detect big moves",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [ 240, 300 ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://geoscan-backend:8000/internal/news/ingest",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ { \"articles\": $input.all().map(i => i.json) } }}",
-        "options": {}
-      },
-      "id": "ingest",
-      "name": "Ingest market signals",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [ 460, 300 ],
-      "credentials": { "httpHeaderAuth": { "id": "REPLACE_INTERNAL", "name": "geoscanInternalKey" } }
+      "position": [ 200, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "geoscanIntKey01", "name": "geoscanInternalKey" } }
     }
   ],
   "connections": {
-    "Every 1 hour": { "main": [ [ { "node": "Yahoo Finance quotes", "type": "main", "index": 0 } ] ] },
-    "Yahoo Finance quotes": { "main": [ [ { "node": "Normalize", "type": "main", "index": 0 } ] ] },
-    "Normalize": { "main": [ [ { "node": "POST /internal/market/update", "type": "main", "index": 0 } ] ] },
-    "POST /internal/market/update": { "main": [ [ { "node": "Detect big moves", "type": "main", "index": 0 } ] ] },
-    "Detect big moves": { "main": [ [ { "node": "Ingest market signals", "type": "main", "index": 0 } ] ] }
+    "Every 1 hour": { "main": [ [ { "node": "CoinGecko (crypto)", "type": "main", "index": 0 } ] ] },
+    "CoinGecko (crypto)": { "main": [ [ { "node": "FX (er-api)", "type": "main", "index": 0 } ] ] },
+    "FX (er-api)": { "main": [ [ { "node": "Normalize", "type": "main", "index": 0 } ] ] },
+    "Normalize": { "main": [ [ { "node": "POST /internal/market/update", "type": "main", "index": 0 } ] ] }
   },
-  "settings": { "executionOrder": "v1" },
-  "tags": [ { "name": "geoscan" } ]
+  "settings": { "executionOrder": "v1" }
 }
