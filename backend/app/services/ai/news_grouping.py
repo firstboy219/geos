@@ -166,10 +166,14 @@ async def _embed_articles(articles: list[NewsArticle]) -> list[list[float] | Non
 async def group_news(db, *, threshold: float | None = None, max_articles: int = MAX_PER_RUN) -> dict:
     thr = threshold if threshold is not None else DEFAULT_THRESHOLD
 
-    # 1. Seed clusters from existing active/monitoring situations.
+    # 1. Anchor clusters ONLY from existing *auto-grouped* situations, so news
+    #    forms dynamic situations and is not absorbed by seeded/manual crises.
     crises = (
         await db.execute(
-            select(Crisis).where(Crisis.status.in_(("active", "monitoring")))
+            select(Crisis).where(
+                Crisis.status.in_(("active", "monitoring")),
+                Crisis.auto_grouped.is_(True),
+            )
         )
     ).scalars().all()
 
@@ -256,6 +260,7 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
                 crisis_type="hybrid",
                 severity_level=5,
                 status="active",
+                auto_grouped=True,
                 credibility_score=round(cl["cred_sum"] / cl["count"], 3),
                 started_at=cl["earliest"],
             )

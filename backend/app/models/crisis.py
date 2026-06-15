@@ -41,6 +41,9 @@ class Crisis(Base):
     crisis_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     severity_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    # True = auto-created by news grouping (Layer 2); False = seeded/manual.
+    # Only auto_grouped situations act as grouping anchors (dynamic situations).
+    auto_grouped: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Framework layers
     redline_index: Mapped[float] = mapped_column(Float, default=5.0)      # Layer A

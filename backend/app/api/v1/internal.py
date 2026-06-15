@@ -12,6 +12,7 @@ from app.celery_app import (
     scan_articles_task,
     trigger_mutation_task,
     analyze_statement_task,
+    translate_news_task,
     summarize_news_task,
     group_news_task,
     purge_old_news_task,
@@ -63,8 +64,9 @@ async def ingest_news(
     if new_ids:
         result = scan_articles_task.delay([str(i) for i in new_ids])
         task_id = result.id
-        # Home-news — AI summarize (points + quotes), then Layer-2 grouping.
-        # Single worker (concurrency=1) processes these FIFO ⇒ summarize first.
+        # FIFO on the single worker: translate → ID first, then (AI) summarize,
+        # then Layer-2 grouping (embeds the Indonesian text).
+        translate_news_task.delay()
         summarize_news_task.delay()
         group_news_task.delay()
     return NewsIngestResponse(
@@ -200,6 +202,17 @@ async def task_trigger_mutation(
     request: Request, payload: TriggerMutationRequest
 ) -> TaskAcceptedResponse:
     result = trigger_mutation_task.delay(str(payload.crisis_id), payload.trigger_reason)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/translate", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_translate_news(
+    request: Request,
+    max_articles: int = Query(300, ge=1, le=5000),
+) -> TaskAcceptedResponse:
+    """Translate ingested news → Bahasa Indonesia (non-AI backfill)."""
+    result = translate_news_task.delay(max_articles)
     return TaskAcceptedResponse(task_id=result.id)
 
 

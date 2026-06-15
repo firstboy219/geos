@@ -53,6 +53,14 @@ def scan_articles_task(article_ids: list[str] | None = None) -> dict:
     return _run(pipeline.run_scan_articles(article_ids or []))
 
 
+@celery_app.task(name="translate_news")
+def translate_news_task(max_articles: int = 300) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("translate_news: max=%s", max_articles)
+    return _run(pipeline.run_translate_news(max_articles))
+
+
 @celery_app.task(name="summarize_news")
 def summarize_news_task(max_articles: int = 200) -> dict:
     from app.services.ai import pipeline

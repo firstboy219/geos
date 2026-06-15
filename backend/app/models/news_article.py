@@ -20,6 +20,8 @@ class NewsArticle(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
+    # original (pre-translation) title; title itself is stored in Bahasa Indonesia
+    title_original: Mapped[str | None] = mapped_column(String(512), nullable=True)
     source_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     url: Mapped[str] = mapped_column(String(1024), unique=True, nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
