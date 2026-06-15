@@ -32,6 +32,7 @@ DEFAULTS: dict[str, tuple] = {
     "openai_model_embedding": (lambda: settings.OPENAI_MODEL_EMBEDDING, False),
     "qdrant_url": (lambda: settings.QDRANT_URL, False),
     "n8n_webhook_url": (lambda: settings.N8N_WEBHOOK_URL, False),
+    "otp_via_email": (lambda: "true", False),
 }
 _SECRET_KEYS = {k for k, (_, sec) in DEFAULTS.items() if sec}
 

@@ -1,8 +1,10 @@
-"""WhatsApp OTP login — sends OTP via n8n (reusing xtracker's WhatsApp node).
+"""Phone-based OTP login (mirrors xtracker logic).
 
-Flow: request_otp(phone) -> store code in Redis (5 min) + POST n8n /webhook/wa-otp
-(which sends WhatsApp using the shared whatsAppApi credential). verify_otp(phone,code)
--> find/create user by phone -> caller issues JWT pair.
+Input is always the phone number. Channel auto-selected like xtracker:
+  - EMAIL if the user (looked up by phone) has a REAL email + OTP_VIA_EMAIL on
+  - otherwise WhatsApp.
+Both channels deliver through n8n webhooks (email via geoscanSmtp, WA via the
+shared xtracker WhatsApp node). Returns {channel, dest} for the UI.
 """
 from __future__ import annotations
 
@@ -10,9 +12,11 @@ import logging
 import re
 import secrets
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import settings_store
 from app.core.config import settings
 from app.core.redis_client import get_redis
 from app.core.security import hash_password
@@ -22,7 +26,9 @@ logger = logging.getLogger("geoscan.wa_auth")
 
 OTP_TTL = 300          # 5 minutes
 MAX_PER_WINDOW = 3     # max OTP requests
-RL_WINDOW = 900        # per 15 minutes
+RL_WINDOW = 3600       # per hour (per-phone, like xtracker)
+
+_SYNTH_RE = re.compile(r"^wa-\d+@cosger\.online$")
 
 
 class OtpError(Exception):
@@ -30,38 +36,67 @@ class OtpError(Exception):
 
 
 def normalize_phone(raw: str) -> str:
-    """Digits-only international format. Indonesian local 0xx -> 62xx."""
     digits = re.sub(r"\D", "", raw or "")
     if digits.startswith("0"):
         digits = "62" + digits[1:]
     return digits
 
 
-async def request_otp(phone: str) -> str:
+def _is_synth_email(email: str | None) -> bool:
+    """True for the placeholder email assigned to WA-created users (not a real inbox)."""
+    return bool(email and _SYNTH_RE.match(email))
+
+
+def mask_email(e: str) -> str:
+    try:
+        name, dom = e.split("@", 1)
+        return (name[0] + "***") + "@" + dom
+    except Exception:
+        return "email"
+
+
+def mask_phone(p: str) -> str:
+    return (p[:3] + "****" + p[-3:]) if len(p) >= 7 else p
+
+
+async def _post_n8n(path: str, body: dict) -> bool:
+    url = settings.N8N_WEBHOOK_URL.rstrip("/") + path
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.post(url, json=body)
+        return r.status_code < 500
+    except Exception as exc:
+        logger.warning("n8n %s failed: %s", path, exc)
+        return False
+
+
+async def request_otp(db: AsyncSession, phone: str) -> dict:
     p = normalize_phone(phone)
     if len(p) < 8:
-        raise OtpError("Nomor WhatsApp tidak valid.")
+        raise OtpError("Nomor WhatsApp/telepon tidak valid.")
+
     r = get_redis()
     rl_key = f"wa_otp_rl:{p}"
     count = await r.incr(rl_key)
     if count == 1:
         await r.expire(rl_key, RL_WINDOW)
     if count > MAX_PER_WINDOW:
-        raise OtpError("Terlalu banyak permintaan OTP. Coba lagi nanti.")
+        raise OtpError("Terlalu banyak permintaan OTP untuk nomor ini. Coba lagi nanti.")
 
     code = f"{secrets.randbelow(1000000):06d}"
     await r.setex(f"wa_otp:{p}", OTP_TTL, code)
 
-    # Send via n8n WhatsApp node (fire-and-forget; don't leak delivery errors).
-    import httpx
+    # Channel selection (xtracker logic): email if user-by-phone has a real email.
+    user = (await db.execute(select(User).where(User.phone == p))).scalar_one_or_none()
+    via_email = (await settings_store.get("otp_via_email")) not in ("false", "0", "no")
+    want_email = via_email and user and user.email and not _is_synth_email(user.email)
 
-    url = settings.N8N_WEBHOOK_URL.rstrip("/") + "/webhook/wa-otp"
-    try:
-        async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(url, json={"phone": p, "code": code})
-    except Exception as exc:
-        logger.warning("wa-otp webhook failed: %s", exc)
-    return p
+    if want_email:
+        if await _post_n8n("/webhook/email-otp", {"email": user.email, "code": code}):
+            return {"channel": "email", "dest": mask_email(user.email)}
+        # fallback to WhatsApp if email delivery couldn't be dispatched
+    await _post_n8n("/webhook/wa-otp", {"phone": p, "code": code})
+    return {"channel": "whatsapp", "dest": mask_phone(p)}
 
 
 async def verify_otp(db: AsyncSession, phone: str, code: str) -> User | None:
@@ -72,9 +107,7 @@ async def verify_otp(db: AsyncSession, phone: str, code: str) -> User | None:
         return None
     await r.delete(f"wa_otp:{p}")
 
-    user = (
-        await db.execute(select(User).where(User.phone == p))
-    ).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.phone == p))).scalar_one_or_none()
     if user is None:
         user = User(
             phone=p,

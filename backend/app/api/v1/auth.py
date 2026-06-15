@@ -16,6 +16,7 @@ from app.schemas.auth import (
     TokenPair,
     UserMeResponse,
     UserResponse,
+    OtpRequestResponse,
     UserUpdateRequest,
     WaOtpRequest,
     WaVerifyRequest,
@@ -54,14 +55,21 @@ async def login(
     )
 
 
-@router.post("/auth/wa/request-otp", response_model=MessageResponse)
-@limiter.limit("3/15minutes")
-async def wa_request_otp(request: Request, payload: WaOtpRequest) -> MessageResponse:
+@router.post("/auth/wa/request-otp", response_model=OtpRequestResponse)
+@limiter.limit("5/15minutes")
+async def wa_request_otp(
+    request: Request, payload: WaOtpRequest, db: AsyncSession = Depends(get_db)
+) -> OtpRequestResponse:
     try:
-        await wa_auth.request_otp(payload.phone)
+        res = await wa_auth.request_otp(db, payload.phone)
     except wa_auth.OtpError as exc:
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc))
-    return MessageResponse(message="Kode OTP dikirim via WhatsApp.")
+    label = "email" if res["channel"] == "email" else "WhatsApp"
+    return OtpRequestResponse(
+        message=f"Kode OTP dikirim ke {res['dest']} via {label}.",
+        channel=res["channel"],
+        dest=res["dest"],
+    )
 
 
 @router.post("/auth/wa/verify-otp", response_model=LoginResponse)

@@ -35,7 +35,7 @@ export default function WhatsappLoginScreen() {
           GEO<Text className="text-accent">SCAN</Text>
         </Text>
         <Text className="text-textMuted text-xs text-center mt-1 mb-8">
-          Masuk dengan WhatsApp
+          Masuk dengan OTP (WhatsApp / Email)
         </Text>
 
         {error ? (
@@ -70,7 +70,7 @@ export default function WhatsappLoginScreen() {
         ) : (
           <>
             <Text className="text-textSecondary text-sm mb-1">
-              Kode OTP (dikirim ke WhatsApp {phone})
+              Kode OTP dikirim ke WhatsApp atau email terdaftar
             </Text>
             <TextInput
               value={code}

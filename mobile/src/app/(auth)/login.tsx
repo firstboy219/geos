@@ -112,7 +112,7 @@ export default function LoginScreen() {
               onPress={() => router.push('/(auth)/whatsapp')}
               disabled={loading}
             >
-              <Text style={styles.waText}>Masuk dengan WhatsApp</Text>
+              <Text style={styles.waText}>Masuk dengan OTP (WhatsApp / Email)</Text>
             </Pressable>
           </View>
         </ScrollView>

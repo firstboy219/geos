@@ -1,0 +1,39 @@
+{
+  "name": "WF-13 — Email OTP (login)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-otp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh",
+      "name": "Webhook /email-otp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [ -360, 300 ],
+      "webhookId": "geoscan-email-otp"
+    },
+    {
+      "parameters": {
+        "fromEmail": "GMAIL_FROM_PLACEHOLDER",
+        "toEmail": "={{ $json.body.email }}",
+        "subject": "Kode OTP Geoscan Anda",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:sans-serif;max-width:480px;margin:0 auto;color:#0D1117\"><h2 style=\"color:#4493F8\">GEO<span style=\"color:#0D1117\">SCAN</span></h2><p>Kode OTP Anda:</p><div style=\"font-size:32px;font-weight:800;letter-spacing:8px;color:#0D1117\">{{ $json.body.code }}</div><p style=\"color:#6E7681\">Berlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.</p></div>",
+        "options": {}
+      },
+      "id": "email",
+      "name": "Send OTP email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [ -140, 300 ],
+      "credentials": { "smtp": { "id": "geoscanSmtp01", "name": "geoscanSmtp" } }
+    }
+  ],
+  "connections": {
+    "Webhook /email-otp": { "main": [ [ { "node": "Send OTP email", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

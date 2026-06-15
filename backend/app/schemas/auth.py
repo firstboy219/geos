@@ -31,6 +31,12 @@ class WaVerifyRequest(BaseModel):
     code: str = Field(min_length=4, max_length=8)
 
 
+class OtpRequestResponse(BaseModel):
+    message: str
+    channel: str  # 'email' | 'whatsapp'
+    dest: str
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
