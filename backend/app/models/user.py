@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Index, String, func
+from sqlalchemy import Boolean, CheckConstraint, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,12 @@ class User(Base):
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     fcm_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # Profile (F3 — personal impact analysis "dampak ke diri sendiri")
+    country: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    profession: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now(), nullable=False

@@ -4,15 +4,20 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.actor import Actor
 from app.models.crisis import Crisis
 from app.models.crisis_actor import CrisisActor
+from app.models.impact import Impact
 from app.models.market_data import MarketData
 from app.models.news_article import NewsArticle
+from app.models.personal_impact import PersonalImpact
+from app.models.scenario import Scenario
+from app.models.scenario_mutation import ScenarioMutation
+from app.models.tripwire import Tripwire
 from app.models.tripwire_event import TripwireEvent
 from app.models.user import User
 from app.models.user_portfolio import UserPortfolio
@@ -47,6 +52,7 @@ async def ingest_news(
             title=art.title,
             source_name=art.source_name or art.source,
             url=art.url,
+            image_url=art.image_url,
             content_summary=art.content_summary or art.content,
             published_at=art.published_at,
             credibility_score=art.credibility_score,
@@ -58,6 +64,63 @@ async def ingest_news(
 
     await db.commit()
     return new_ids
+
+
+async def purge_old_news(db: AsyncSession, *, months: int = 4) -> dict:
+    """Retention — hapus news_articles yang umurnya > `months` (by ingested_at)."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=months * 30)
+    res = await db.execute(
+        delete(NewsArticle).where(NewsArticle.ingested_at < cutoff)
+    )
+    await db.commit()
+    return {"deleted": int(res.rowcount or 0), "cutoff": cutoff.isoformat()}
+
+
+async def purge_old_data(db: AsyncSession, *, months: int = 4) -> dict:
+    """Retention — hapus SEMUA data yang di-generate (situasi + skenario + dampak
+    + berita + personal impact) yang umurnya > `months`. FK ondelete tidak
+    lengkap (tripwires/news/scenario_mutations), jadi hapus berurutan eksplisit.
+    Situasi dihitung dari created_at; berita dari ingested_at."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=months * 30)
+    counts: dict[str, int] = {}
+
+    old_crises = select(Crisis.id).where(Crisis.created_at < cutoff)
+    scen_ids = select(Scenario.id).where(Scenario.crisis_id.in_(old_crises))
+    trip_ids = select(Tripwire.id).where(Tripwire.crisis_id.in_(old_crises))
+
+    async def _del(name, stmt):
+        res = await db.execute(stmt)
+        counts[name] = int(res.rowcount or 0)
+
+    # children first → parents last (works regardless of FK ondelete)
+    await _del("scenario_mutations", delete(ScenarioMutation).where(
+        ScenarioMutation.scenario_id.in_(scen_ids)
+        | ScenarioMutation.tripwire_id.in_(trip_ids)
+    ))
+    await _del("tripwire_events", delete(TripwireEvent).where(
+        TripwireEvent.tripwire_id.in_(trip_ids)
+    ))
+    await _del("scenarios", delete(Scenario).where(Scenario.crisis_id.in_(old_crises)))
+    await _del("impacts", delete(Impact).where(Impact.crisis_id.in_(old_crises)))
+    await _del("crisis_actors", delete(CrisisActor).where(CrisisActor.crisis_id.in_(old_crises)))
+    await _del("tripwires", delete(Tripwire).where(Tripwire.crisis_id.in_(old_crises)))
+    # detach any still-referencing articles so the crisis delete won't be blocked
+    await db.execute(
+        NewsArticle.__table__.update()
+        .where(NewsArticle.crisis_id.in_(old_crises))
+        .values(crisis_id=None)
+    )
+    await _del("crises", delete(Crisis).where(Crisis.created_at < cutoff))
+    await _del("news_articles", delete(NewsArticle).where(NewsArticle.ingested_at < cutoff))
+    await _del("personal_impacts", delete(PersonalImpact).where(PersonalImpact.created_at < cutoff))
+    # orphaned auto-generated actors (no remaining crisis link), aged out
+    await _del("actors", delete(Actor).where(
+        Actor.created_at < cutoff,
+        Actor.id.notin_(select(CrisisActor.actor_id)),
+    ))
+
+    await db.commit()
+    return {"cutoff": cutoff.isoformat(), "deleted": counts}
 
 
 async def update_actor_statement(

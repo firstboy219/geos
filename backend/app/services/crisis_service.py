@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.actor import Actor
 from app.models.crisis import Crisis
 from app.models.crisis_actor import CrisisActor
+from app.models.news_article import NewsArticle
 from app.models.scenario import Scenario
 from app.models.scenario_mutation import ScenarioMutation
 from app.models.tripwire import Tripwire
@@ -45,6 +46,31 @@ async def list_crises(
     )
     rows = list((await db.scalars(stmt)).all())
     return rows, total
+
+
+async def news_counts(db: AsyncSession, crisis_ids: list[uuid.UUID]) -> dict:
+    """Map {crisis_id: number of grouped news_articles} (Layer 2)."""
+    if not crisis_ids:
+        return {}
+    rows = await db.execute(
+        select(NewsArticle.crisis_id, func.count(NewsArticle.id))
+        .where(NewsArticle.crisis_id.in_(crisis_ids))
+        .group_by(NewsArticle.crisis_id)
+    )
+    return {cid: int(n) for cid, n in rows.all()}
+
+
+async def list_crisis_news(
+    db: AsyncSession, crisis_id: uuid.UUID, *, limit: int = 50
+) -> list[NewsArticle]:
+    stmt = (
+        select(NewsArticle)
+        .where(NewsArticle.crisis_id == crisis_id)
+        .order_by(NewsArticle.published_at.desc().nullslast(),
+                  NewsArticle.ingested_at.desc())
+        .limit(limit)
+    )
+    return list((await db.scalars(stmt)).all())
 
 
 async def get_crisis(db: AsyncSession, crisis_id: uuid.UUID) -> Crisis:

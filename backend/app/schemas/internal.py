@@ -14,6 +14,7 @@ class NewsArticleIn(BaseModel):
     source: str | None = Field(default=None, max_length=100)
     source_name: str | None = Field(default=None, max_length=100)
     url: str = Field(max_length=1024)
+    image_url: str | None = Field(default=None, max_length=1024)
     content: str | None = None
     content_summary: str | None = None
     published_at: datetime | None = None

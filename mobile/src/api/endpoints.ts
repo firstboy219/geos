@@ -27,7 +27,15 @@ export const endpoints = {
   crisis: (id: string) => `/crises/${id}`,
   crisisScenarios: (id: string) => `/crises/${id}/scenarios`,
   crisisActors: (id: string) => `/crises/${id}/actors`,
+  crisisNews: (id: string) => `/crises/${id}/news`,
   scenarioHistory: (id: string) => `/scenarios/${id}/history`,
+
+  // ── News feed (Beranda) ───────────────────────────────────
+  news: '/news',
+
+  // ── Dampak (impacts) ──────────────────────────────────────
+  impacts: '/impacts',
+  personalImpact: '/impacts/personal',
 
   // ── Actors ────────────────────────────────────────────────
   actors: '/actors',

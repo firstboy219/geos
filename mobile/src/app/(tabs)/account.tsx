@@ -48,6 +48,11 @@ export default function AccountScreen() {
 
         <SectionHeader title="Pengaturan" />
         <GeoCard padded={false}>
+          <MenuTile
+            icon="person-circle-outline"
+            label="Data Pribadi"
+            onPress={() => router.push('/profile/edit')}
+          />
           <MenuTile icon="notifications-outline" label="Notifikasi" onPress={soon} />
           <MenuTile icon="options-outline" label="Konfigurasi Tripwire" onPress={soon} />
           <MenuTile

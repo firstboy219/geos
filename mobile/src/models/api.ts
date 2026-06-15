@@ -123,6 +123,7 @@ export interface CrisisDto {
   credibilityScore: number;
   grayZone: boolean;
   shockMultiplier: number;
+  newsCount: number;
   scenarios: ScenarioDto[];
 }
 
@@ -144,6 +145,7 @@ export function parseCrisis(raw: unknown): CrisisDto {
     credibilityScore: num(j.credibility_score, 0.8),
     grayZone: bool(j.gray_zone),
     shockMultiplier: num(j.shock_multiplier, 1.0),
+    newsCount: int(j.news_count, 0),
     scenarios: asArray(scenarioSource).map(parseScenario),
   };
 }

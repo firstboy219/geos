@@ -58,6 +58,19 @@ class CrisisListItem(BaseModel):
     tdi_alert: bool
     started_at: datetime | None = None
     created_at: datetime
+    news_count: int = 0  # Layer 2 — number of grouped source articles
+
+
+class CrisisNewsItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    source_name: str | None = None
+    url: str
+    content_summary: str | None = None
+    published_at: datetime | None = None
+    credibility_score: float
 
 
 class CrisisResponse(CrisisListItem):

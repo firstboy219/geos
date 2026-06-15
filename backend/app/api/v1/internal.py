@@ -8,7 +8,18 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.celery_app import scan_articles_task, trigger_mutation_task, analyze_statement_task
+from app.celery_app import (
+    scan_articles_task,
+    trigger_mutation_task,
+    analyze_statement_task,
+    summarize_news_task,
+    group_news_task,
+    purge_old_news_task,
+    generate_scenarios_task,
+    generate_missing_scenarios_task,
+    generate_impacts_task,
+    generate_missing_impacts_task,
+)
 from app.core.dependencies import get_db, verify_internal_key
 from app.core.limiter import limiter
 from app.schemas.common import MessageResponse
@@ -52,6 +63,10 @@ async def ingest_news(
     if new_ids:
         result = scan_articles_task.delay([str(i) for i in new_ids])
         task_id = result.id
+        # Home-news — AI summarize (points + quotes), then Layer-2 grouping.
+        # Single worker (concurrency=1) processes these FIFO ⇒ summarize first.
+        summarize_news_task.delay()
+        group_news_task.delay()
     return NewsIngestResponse(
         accepted=len(new_ids),
         queued=len(new_ids),
@@ -185,4 +200,84 @@ async def task_trigger_mutation(
     request: Request, payload: TriggerMutationRequest
 ) -> TaskAcceptedResponse:
     result = trigger_mutation_task.delay(str(payload.crisis_id), payload.trigger_reason)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/summarize", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_summarize_news(
+    request: Request,
+    max_articles: int = Query(200, ge=1, le=5000),
+) -> TaskAcceptedResponse:
+    """Home-news — manually trigger AI summarize (points/quotes) backfill."""
+    result = summarize_news_task.delay(max_articles)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/group", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_group_news(
+    request: Request,
+    threshold: float | None = Query(None, ge=0.4, le=0.95),
+    max_articles: int = Query(600, ge=1, le=5000),
+) -> TaskAcceptedResponse:
+    """Layer 2 — manually trigger news→situation clustering (backfill/n8n)."""
+    result = group_news_task.delay(threshold, max_articles)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/purge", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_purge_old_news(
+    request: Request,
+    months: int = Query(4, ge=1, le=24),
+) -> TaskAcceptedResponse:
+    """Retention — delete news_articles older than `months` (default 4)."""
+    result = purge_old_news_task.delay(months)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/crises/{crisis_id}/generate-scenarios", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_generate_scenarios(
+    request: Request,
+    crisis_id: uuid.UUID,
+    force: bool = Query(False),
+) -> TaskAcceptedResponse:
+    """F1 — generate 16-layer scenarios/actors/tripwires for a situation."""
+    result = generate_scenarios_task.delay(str(crisis_id), force)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/scenarios/generate-missing", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_generate_missing_scenarios(
+    request: Request,
+    limit: int = Query(20, ge=1, le=200),
+) -> TaskAcceptedResponse:
+    """F1 — backfill scenarios for active situations that have none."""
+    result = generate_missing_scenarios_task.delay(limit)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/crises/{crisis_id}/generate-impacts", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_generate_impacts(
+    request: Request,
+    crisis_id: uuid.UUID,
+    force: bool = Query(False),
+) -> TaskAcceptedResponse:
+    """F2 — generate Dampak (impacts) for a situation."""
+    result = generate_impacts_task.delay(str(crisis_id), force)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/impacts/generate-missing", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_generate_missing_impacts(
+    request: Request,
+    limit: int = Query(20, ge=1, le=200),
+) -> TaskAcceptedResponse:
+    """F2 — backfill impacts for active situations that have none."""
+    result = generate_missing_impacts_task.delay(limit)
     return TaskAcceptedResponse(task_id=result.id)

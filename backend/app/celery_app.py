@@ -53,6 +53,71 @@ def scan_articles_task(article_ids: list[str] | None = None) -> dict:
     return _run(pipeline.run_scan_articles(article_ids or []))
 
 
+@celery_app.task(name="summarize_news")
+def summarize_news_task(max_articles: int = 200) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("summarize_news: max=%s", max_articles)
+    return _run(pipeline.run_summarize_news(max_articles))
+
+
+@celery_app.task(name="group_news")
+def group_news_task(threshold: float | None = None, max_articles: int = 600) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("group_news: threshold=%s max=%s", threshold, max_articles)
+    res = _run(pipeline.run_group_news(threshold, max_articles))
+    # F1 — analyze each newly-formed situation with the 16-layer framework.
+    for sit in res.get("situations", []) or []:
+        if sit.get("id"):
+            generate_scenarios_task.delay(sit["id"])
+    return res
+
+
+@celery_app.task(name="generate_scenarios", rate_limit="30/h", max_retries=1)
+def generate_scenarios_task(crisis_id: str, force: bool = False) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("generate_scenarios: crisis=%s force=%s", crisis_id, force)
+    res = _run(pipeline.run_generate_scenarios(crisis_id, force))
+    # F2 — once analyzed, derive the Dampak (impacts) for this situation.
+    if res.get("status") == "ok":
+        generate_impacts_task.delay(crisis_id, force)
+    return res
+
+
+@celery_app.task(name="generate_missing_scenarios")
+def generate_missing_scenarios_task(limit: int = 20) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("generate_missing_scenarios: limit=%s", limit)
+    return _run(pipeline.run_generate_missing_scenarios(limit))
+
+
+@celery_app.task(name="generate_impacts", rate_limit="30/h", max_retries=1)
+def generate_impacts_task(crisis_id: str, force: bool = False) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("generate_impacts: crisis=%s force=%s", crisis_id, force)
+    return _run(pipeline.run_generate_impacts(crisis_id, force))
+
+
+@celery_app.task(name="generate_missing_impacts")
+def generate_missing_impacts_task(limit: int = 20) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("generate_missing_impacts: limit=%s", limit)
+    return _run(pipeline.run_generate_missing_impacts(limit))
+
+
+@celery_app.task(name="purge_old_news")
+def purge_old_news_task(months: int = 4) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("purge_old_news: months=%s", months)
+    return _run(pipeline.run_purge_old_news(months))
+
+
 @celery_app.task(name="analyze_statement")
 def analyze_statement_task(actor_id: str, statement_text: str | None = None) -> dict:
     from app.services.ai import pipeline

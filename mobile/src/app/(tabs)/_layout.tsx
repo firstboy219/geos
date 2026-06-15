@@ -1,15 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import type { ComponentProps } from 'react';
 import type { ColorValue } from 'react-native';
 
-import { borders, colors, typography } from '@/theme';
+import { Sym } from '@/components/chronicle/Sym';
+import { chronicle } from '@/theme/chronicle';
 
-type IoniconName = ComponentProps<typeof Ionicons>['name'];
-
-function tabIcon(name: IoniconName) {
+function tabIcon(name: string) {
   return ({ color, size }: { color: ColorValue; size: number }) => (
-    <Ionicons name={name} color={color as string} size={size} />
+    <Sym name={name} color={color as string} size={size} />
   );
 }
 
@@ -18,40 +15,43 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: chronicle.primary,
+        tabBarInactiveTintColor: chronicle.onSurfaceVariant,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: borders.hairline,
+          backgroundColor: chronicle.canvas,
+          borderTopColor: chronicle.surfaceVariant,
+          borderTopWidth: 1,
         },
         tabBarLabelStyle: {
-          fontSize: typography.label.fontSize,
-          fontWeight: typography.label.fontWeight,
+          fontFamily: 'Inter_500Medium',
+          fontSize: 11,
         },
-        sceneStyle: { backgroundColor: colors.background },
+        sceneStyle: { backgroundColor: chronicle.canvas },
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Analisis', tabBarIcon: tabIcon('home-outline') }}
+        options={{ title: 'Beranda', tabBarIcon: tabIcon('home') }}
       />
       <Tabs.Screen
-        name="pasar"
-        options={{ title: 'Pasar', tabBarIcon: tabIcon('bar-chart-outline') }}
+        name="analisa"
+        options={{ title: 'Analisa', tabBarIcon: tabIcon('schedule') }}
       />
       <Tabs.Screen
-        name="vectors"
-        options={{ title: 'Vectors', tabBarIcon: tabIcon('pulse-outline') }}
+        name="dampak"
+        options={{ title: 'Dampak', tabBarIcon: tabIcon('thermostat') }}
       />
       <Tabs.Screen
         name="portfolio"
-        options={{ title: 'Portofolio', tabBarIcon: tabIcon('wallet-outline') }}
+        options={{ title: 'Treasury', tabBarIcon: tabIcon('diamond') }}
       />
       <Tabs.Screen
         name="account"
-        options={{ title: 'Profil', tabBarIcon: tabIcon('person-outline') }}
+        options={{ title: 'Profil', tabBarIcon: tabIcon('person') }}
       />
+      {/* Routes kept for deep-links but not shown as their own tab. */}
+      <Tabs.Screen name="vectors" options={{ href: null }} />
+      <Tabs.Screen name="pasar" options={{ href: null }} />
     </Tabs>
   );
 }

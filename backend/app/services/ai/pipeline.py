@@ -44,6 +44,61 @@ async def run_scan_articles(article_ids: list) -> dict:
     return {"scanned": len(articles), "triggered": triggered}
 
 
+async def run_summarize_news(max_articles: int = 200) -> dict:
+    """Home-news — AI summarize (points + quotes) for ingested articles."""
+    from app.services.ai.summarizer import summarize_news
+
+    async with AsyncSessionLocal() as db:
+        return await summarize_news(db, max_articles=max_articles)
+
+
+async def run_group_news(threshold: float | None = None, max_articles: int = 600) -> dict:
+    """Layer 2 — cluster ungrouped news_articles into situations (crises)."""
+    from app.services.ai.news_grouping import group_news
+
+    async with AsyncSessionLocal() as db:
+        return await group_news(db, threshold=threshold, max_articles=max_articles)
+
+
+async def run_purge_old_news(months: int = 4) -> dict:
+    """Retention — delete ALL generated data older than `months` (situations,
+    scenarios, impacts, news, personal impacts). Name kept for compatibility."""
+    from app.services import internal_service
+
+    async with AsyncSessionLocal() as db:
+        return await internal_service.purge_old_data(db, months=months)
+
+
+async def run_generate_scenarios(crisis_id: str, force: bool = False) -> dict:
+    """F1 — 16-layer scenario/actor/tripwire generation for a situation."""
+    from app.services.ai.scenario_generator import generate_for_crisis
+
+    async with AsyncSessionLocal() as db:
+        return await generate_for_crisis(db, crisis_id, force=force)
+
+
+async def run_generate_missing_scenarios(limit: int = 20) -> dict:
+    from app.services.ai.scenario_generator import generate_missing
+
+    async with AsyncSessionLocal() as db:
+        return await generate_missing(db, limit=limit)
+
+
+async def run_generate_impacts(crisis_id: str, force: bool = False) -> dict:
+    """F2 — Dampak: generate general + per-category impacts for a situation."""
+    from app.services.ai.impact_generator import generate_for_crisis
+
+    async with AsyncSessionLocal() as db:
+        return await generate_for_crisis(db, crisis_id, force=force)
+
+
+async def run_generate_missing_impacts(limit: int = 20) -> dict:
+    from app.services.ai.impact_generator import generate_missing
+
+    async with AsyncSessionLocal() as db:
+        return await generate_missing(db, limit=limit)
+
+
 async def run_analyze_statement(actor_id: str, statement_text: str | None = None) -> dict:
     async with AsyncSessionLocal() as db:
         actor = await db.get(Actor, uuid.UUID(str(actor_id)))

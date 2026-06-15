@@ -13,6 +13,7 @@ from app.schemas.common import PaginatedResponse
 from app.schemas.crisis import (
     CrisisDetailResponse,
     CrisisListItem,
+    CrisisNewsItem,
     CrisisResponse,
     ScenarioResponse,
     TripwireResponse,
@@ -42,12 +43,13 @@ async def list_crises(
         region=region,
         crisis_type=crisis_type,
     )
-    return PaginatedResponse(
-        data=[CrisisListItem.model_validate(c) for c in rows],
-        total=total,
-        page=page,
-        size=size,
-    )
+    counts = await crisis_service.news_counts(db, [c.id for c in rows])
+    items = []
+    for c in rows:
+        item = CrisisListItem.model_validate(c)
+        item.news_count = counts.get(c.id, 0)
+        items.append(item)
+    return PaginatedResponse(data=items, total=total, page=page, size=size)
 
 
 @router.get("/{crisis_id}", response_model=CrisisDetailResponse)
@@ -68,6 +70,19 @@ async def get_crisis_detail(
         actors=[ActorResponse.model_validate(a) for a in actors],
         tripwires=[TripwireResponse.model_validate(t) for t in tripwires],
     )
+
+
+@router.get("/{crisis_id}/news", response_model=list[CrisisNewsItem])
+async def get_crisis_news(
+    crisis_id: uuid.UUID,
+    limit: int = Query(50, ge=1, le=200),
+    _user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[CrisisNewsItem]:
+    """Source articles grouped into this situation (Layer 2 drill-down)."""
+    await crisis_service.get_crisis(db, crisis_id)  # 404 jika tidak ada
+    articles = await crisis_service.list_crisis_news(db, crisis_id, limit=limit)
+    return [CrisisNewsItem.model_validate(a) for a in articles]
 
 
 @router.get("/{crisis_id}/scenarios", response_model=list[ScenarioResponse])

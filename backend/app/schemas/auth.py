@@ -53,6 +53,11 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     fcm_token: str | None = None
+    country: str | None = None
+    city: str | None = None
+    profession: str | None = None
+    gender: str | None = None
+    birth_year: int | None = None
     created_at: datetime
 
 
@@ -71,3 +76,8 @@ class LoginResponse(BaseModel):
 class UserUpdateRequest(BaseModel):
     fcm_token: str | None = Field(default=None, max_length=512)
     full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    country: str | None = Field(default=None, max_length=80)
+    city: str | None = Field(default=None, max_length=120)
+    profession: str | None = Field(default=None, max_length=120)
+    gender: str | None = Field(default=None, max_length=20)
+    birth_year: int | None = Field(default=None, ge=1900, le=2025)

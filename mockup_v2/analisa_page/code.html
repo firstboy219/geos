@@ -1,0 +1,532 @@
+<!DOCTYPE html><html class="light" lang="id" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Chronicle - Situasi Kritis Saat ini</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:wght@400&amp;family=Work+Sans:wght@600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "surface-container-low": "#f7f2f2",
+                "on-background": "#1c1b1b",
+                "on-tertiary": "#ffffff",
+                "outline": "#747683",
+                "background": "#ffffff",
+                "on-tertiary-container": "#f5845e",
+                "secondary-fixed-dim": "#ffb693",
+                "secondary": "#a04100",
+                "outline-variant": "#c4c6d4",
+                "error-rose": "#f43f5e",
+                "inverse-surface": "#313030",
+                "surface-tint": "#385ab1",
+                "tertiary-fixed": "#ffdbd0",
+                "inverse-on-surface": "#f4f0ef",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-highest": "#e6e1e1",
+                "surface-bright": "#fdf8f8",
+                "tertiary-fixed-dim": "#ffb59d",
+                "on-error": "#ffffff",
+                "tertiary": "#481000",
+                "on-primary": "#ffffff",
+                "primary-container": "#003289",
+                "surface": "#ffffff",
+                "primary-fixed": "#dbe1ff",
+                "on-error-container": "#93000a",
+                "tertiary-container": "#6c1e01",
+                "inverse-primary": "#b3c5ff",
+                "surface-dim": "#ddd9d8",
+                "on-secondary-fixed-variant": "#7a3000",
+                "secondary-fixed": "#ffdbcc",
+                "surface-variant": "#f4f0ef",
+                "on-primary-fixed-variant": "#1a4197",
+                "warning-amber": "#f59e0b",
+                "surface-container": "#f0eded",
+                "on-primary-container": "#809ffb",
+                "on-surface-variant": "#444652",
+                "primary-fixed-dim": "#b3c5ff",
+                "on-tertiary-fixed-variant": "#7e2b0c",
+                "on-secondary-fixed": "#351000",
+                "error-container": "#ffdad6",
+                "secondary-container": "#ff8849",
+                "error": "#ba1a1a",
+                "on-tertiary-fixed": "#390b00",
+                "surface-container-high": "#ece7e7",
+                "primary": "#001f5b",
+                "on-primary-fixed": "#00174a",
+                "success-emerald": "#10b981",
+                "on-surface": "#1c1b1b",
+                "on-secondary": "#ffffff",
+                "on-secondary-container": "#6b2900"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "xs": "4px",
+                "container-margin": "20px",
+                "lg": "24px",
+                "md": "16px",
+                "gutter": "16px",
+                "sm": "8px",
+                "xl": "32px"
+        },
+        "fontFamily": {
+                "label-md": [
+                        "Inter"
+                ],
+                "headline-lg-mobile": [
+                        "Work Sans"
+                ],
+                "body-md": [
+                        "Source Serif 4"
+                ],
+                "headline-lg": [
+                        "Work Sans"
+                ],
+                "label-sm": [
+                        "Inter"
+                ],
+                "meta-sm": [
+                        "Inter"
+                ],
+                "headline-md": [
+                        "Work Sans"
+                ],
+                "code-table": [
+                        "ui-monospace"
+                ],
+                "body-lg": [
+                        "Source Serif 4"
+                ]
+        },
+        "fontSize": {
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "24px",
+                        {
+                                "lineHeight": "30px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "30px",
+                        {
+                                "lineHeight": "38px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "meta-sm": [
+                        "13px",
+                        {
+                                "lineHeight": "18px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-md": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "code-table": [
+                        "10px",
+                        {
+                                "lineHeight": "12px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for horizontal scrolling chips */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased pb-24 selection:bg-primary-fixed selection:text-on-primary-fixed min-h-screen flex flex-col">
+<!-- TopAppBar from JSON -->
+<header class="w-full sticky top-0 z-50 bg-background dark:bg-background border-b border-surface-variant dark:border-outline-variant shadow-sm dark:shadow-none flex justify-between items-center px-container-margin py-sm w-full">
+<button class="text-on-background dark:text-primary-fixed hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 transition-transform p-2 rounded-full">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile md:text-headline-md font-bold text-on-background dark:text-primary-fixed">
+            Analisis &nbsp; &nbsp; &nbsp; &nbsp;</h1>
+<button class="text-on-background dark:text-primary-fixed hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 transition-transform p-2 rounded-full">
+<span class="material-symbols-outlined">share</span>
+</button>
+</header>
+<main class="flex-grow max-w-3xl mx-auto w-full px-container-margin pt-lg"><section class="mb-xl">
+<div class="bg-surface-container-lowest rounded-lg border border-surface-variant shadow-sm overflow-hidden">
+<div class="px-4 py-3 border-b border-surface-variant">
+<h2 class="font-headline-md text-headline-md text-on-background">Global Situation Overview</h2>
+</div>
+<div class="w-full">
+<img alt="Global Situation Overview Map" class="w-full h-auto block" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDI4sa8qAHfSgNl3hhoYrEIZ638_dLhiqU6bU3zUJhUbXziakI4tI9na7pGhGVTaRD79cbrAkgv43m72kZvKeQTwOxOay2WtxsqUxDK6zLnlUAk4G6IAPTRmN00ADyoSSPAvaG4xKH8a9nRWw5Hwf44zTa002Ai9GfItTNhTPboA7dDV5na8avkMgQg6zjx1QdYk3WOGq-kooimWSac62mXDIx42Wyv5cdCQ-cXzG6xykEhYX11Egdbpu7jNQpBXv6AH80upEJ79kI">
+</div>
+<div class="bg-surface-container-low px-4 py-2 border-t border-surface-variant">
+<p class="font-label-sm text-label-sm text-on-surface-variant flex items-center">
+<span class="material-symbols-outlined mr-1" style="font-size: 16px;">public</span>
+                Real-time global risk monitoring
+            </p>
+</div>
+</div>
+</section>
+<!-- Category Chips -->
+<div class="flex space-x-sm overflow-x-auto hide-scrollbar mb-lg pb-2 border-b border-surface-variant">
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full border border-on-background bg-on-background text-on-primary font-label-md transition-colors">
+                Internasional
+            </button>
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container font-label-md transition-colors">
+                Regional
+            </button>
+<button class="flex-shrink-0 px-4 py-1.5 rounded-full border border-outline-variant text-on-surface-variant hover:bg-surface-container font-label-md transition-colors">
+                Nasional
+            </button>
+</div>
+<h2 class="font-headline-md text-headline-md mb-md text-on-background">Situasi Kritis Saat ini :</h2>
+<div class="space-y-xl">
+<!-- Collapsed View -->
+<article class="bg-surface-container-lowest overflow-hidden transition-shadow pb-lg border-b border-surface-variant">
+<div class="p-0"><div class="mb-md overflow-hidden rounded-lg border border-surface-variant shadow-sm"><img alt="Peta Situasi Selat Hormuz" class="w-full h-auto block" src="https://lh3.googleusercontent.com/aida/AP1WRLuvQDnZBO2oUU1-69BUq9qB6MiyQxO9eTLI_s_U0un4s0fZgpwljW2-3NSh1m6_7MPOZtQFo1_TezVhlItCCdPoteWdXacQRH43Y0g3-7mpjPhYn34hYD8vn34HdcA49qcQ44L0p7-7fYAK9LtP_RWTO6XnbLYu0Xl7jnEkMvidqQpZKLLJjRZ5rIDkoshmibjYCBnHf3TYTA-hEiftt-I2o091K2lzsy96mK13nAX7Q0zMQHh4VHrMSvo"><div class="bg-surface-container-low px-4 py-2 border-t border-surface-variant"><p class="font-label-sm text-label-sm text-on-surface-variant flex items-center"><span class="material-symbols-outlined mr-1" style="font-size: 16px;">map</span>Visualisasi Zona Insiden Maritim</p></div></div>
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-1">Selat Hormuz</h3>
+<p class="font-label-sm text-label-sm text-success-emerald uppercase tracking-wider">Potensi Hoax 0%</p>
+</div>
+<div class="text-right">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary block">32</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Sumber</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md mb-xs hidden">Ringkasan</h4>
+<p class="font-body-lg text-body-lg text-on-background mb-md line-clamp-3 leading-relaxed">
+                        Kapal penjaga pantai China (CCG) terus masuk Zona Ekonomi Eksklusif Indonesia di Kepulauan Natuna. China mengklaim lewat "9-dash line" yang ditolak Indonesia. TNI AL sudah dikerahkan. Kedua pihak tidak inginkan eskalasi besar karena saling bergantung secara ekonomi.
+                    </p>
+<div class="bg-surface-container-low p-sm rounded border-l-2 border-success-emerald mb-md border-l-[6px]">
+<p class="font-meta-sm text-meta-sm text-on-background flex items-center">
+<span class="material-symbols-outlined fill mr-xs text-success-emerald" style="font-size: 16px;">circle</span>
+                            Kemungkinan besar tidak akan ada konflik fisik. Indonesia sedang mempertahankan posisi diplomatik dengan tenang.
+                        </p>
+</div>
+<div class="space-y-sm mb-md">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Apa yang paling mungkin terjadi:</p>
+<div class="flex items-center text-sm">
+<span class="w-1/2 text-on-background font-medium">Tidak ada eskalasi</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-success-emerald h-full rounded-full" style="width: 43%"></div>
+</div>
+<span class="w-12 text-right font-bold text-success-emerald">43%</span>
+</div>
+</div>
+<div class="flex justify-between items-center border-t border-surface-variant pt-sm mt-sm">
+<div class="text-xs text-on-surface-variant leading-relaxed">
+                            Sudah Berlangsung 32 Hari<br>
+<span class="font-medium text-on-background">Potensi Keberlanjutan 3 bulan</span>
+</div>
+<button class="flex items-center space-x-xs font-label-md text-label-md text-primary hover:text-primary-container transition-colors">
+<span class="">Expand</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+</div>
+</article>
+<!-- Expanded View -->
+<article class="bg-surface-container-lowest overflow-hidden pb-lg border-b border-surface-variant">
+<div class="p-0"><div class="mb-md overflow-hidden rounded-lg border border-surface-variant shadow-sm"><img alt="Peta Situasi Selat Hormuz" class="w-full h-auto block" src="https://lh3.googleusercontent.com/aida/AP1WRLuvQDnZBO2oUU1-69BUq9qB6MiyQxO9eTLI_s_U0un4s0fZgpwljW2-3NSh1m6_7MPOZtQFo1_TezVhlItCCdPoteWdXacQRH43Y0g3-7mpjPhYn34hYD8vn34HdcA49qcQ44L0p7-7fYAK9LtP_RWTO6XnbLYu0Xl7jnEkMvidqQpZKLLJjRZ5rIDkoshmibjYCBnHf3TYTA-hEiftt-I2o091K2lzsy96mK13nAX7Q0zMQHh4VHrMSvo"><div class="bg-surface-container-low px-4 py-2 border-t border-surface-variant"><p class="font-label-sm text-label-sm text-on-surface-variant flex items-center"><span class="material-symbols-outlined mr-1" style="font-size: 16px;">map</span>Visualisasi Zona Insiden Maritim</p></div></div>
+<div class="flex justify-between items-start mb-sm">
+<div>
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-1">Selat Hormuz</h3>
+<p class="font-label-sm text-label-sm text-success-emerald uppercase tracking-wider">Potensi Hoax 0%</p>
+</div>
+<div class="text-right">
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary block">32</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Sumber</span>
+</div>
+</div>
+<h4 class="font-headline-md text-headline-md mb-xs hidden">Ringkasan</h4>
+<p class="font-body-lg text-body-lg text-on-background mb-md leading-relaxed">
+                        Kapal penjaga pantai China (CCG) terus masuk Zona Ekonomi Eksklusif Indonesia di Kepulauan Natuna. China mengklaim lewat "9-dash line" yang ditolak Indonesia. TNI AL sudah dikerahkan. Kedua pihak tidak inginkan eskalasi besar karena saling bergantung secara ekonomi.
+                    </p>
+<div class="bg-surface-container-low p-sm rounded border-l-2 border-success-emerald mb-md border-l-[6px]">
+<p class="font-meta-sm text-meta-sm text-on-background flex items-center">
+<span class="material-symbols-outlined fill mr-xs text-success-emerald" style="font-size: 16px;">circle</span>
+                            Kemungkinan besar tidak akan ada konflik fisik. Indonesia sedang mempertahankan posisi diplomatik dengan tenang.
+                        </p>
+</div>
+<div class="space-y-sm mb-lg">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wide">Apa yang paling mungkin terjadi:</p>
+<div class="flex items-center text-sm mb-1">
+<span class="w-1/2 text-on-background font-medium">Tidak ada eskalasi</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-success-emerald h-full rounded-full" style="width: 43%"></div>
+</div>
+<span class="w-12 text-right font-bold text-success-emerald">43%</span>
+</div>
+<div class="flex items-center text-sm mb-1">
+<span class="w-1/2 text-on-background">Indonesia terpaksa pilih satu blok</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-warning-amber h-full rounded-full" style="width: 29%"></div>
+</div>
+<span class="w-12 text-right font-semibold">29%</span>
+</div>
+<div class="flex items-center text-sm mb-1">
+<span class="w-1/2 text-on-background">Insiden terbatas di laut</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-error-rose h-full rounded-full" style="width: 15%"></div>
+</div>
+<span class="w-12 text-right font-semibold">15%</span>
+</div>
+<div class="flex items-center text-sm mb-1">
+<span class="w-1/2 text-on-background">Indonesia jadi mediator</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-success-emerald h-full rounded-full" style="width: 9%"></div>
+</div>
+<span class="w-12 text-right font-semibold">9%</span>
+</div>
+<div class="flex items-center text-sm">
+<span class="w-1/2 text-on-background">Tekanan ekonomi dari luar</span>
+<div class="w-1/3 bg-surface-variant h-1.5 rounded-full mx-sm overflow-hidden">
+<div class="bg-error-rose h-full rounded-full" style="width: 4%"></div>
+</div>
+<span class="w-12 text-right font-semibold">4%</span>
+</div>
+</div>
+<!-- Regional Sentiment Minimal -->
+<div class="mb-xl">
+<h5 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-md border-b border-surface-variant pb-1">Analisis Sentimen Regional</h5>
+<div class="space-y-md">
+<div class="flex items-start">
+<div class="w-8 text-xl mr-sm">🇨🇳</div>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-0.5">China membaca Indonesia</p>
+<p class="font-body-md text-body-md text-on-background mb-1">Diam = setuju secara diam-diam</p>
+<p class="font-meta-sm text-meta-sm text-error flex items-center">
+<span class="material-symbols-outlined mr-1" style="font-size: 14px;">warning</span>
+                                Misread Δ — sangat berbahaya
+                            </p>
+</div>
+</div>
+<div class="flex items-start">
+<div class="w-8 text-xl mr-sm">🇮🇩</div>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-0.5">Indonesia membaca China</p>
+<p class="font-body-md text-body-md text-on-background mb-1">Provokasi terukur, bukan niat perang</p>
+<p class="font-meta-sm text-meta-sm text-success-emerald flex items-center">
+<span class="material-symbols-outlined mr-1" style="font-size: 14px;">check</span>
+                                Misread rendah ✓
+                            </p>
+</div>
+</div>
+<div class="flex items-start">
+<div class="w-8 text-xl mr-sm">🇺🇸</div>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-0.5">Amerika membaca Indonesia</p>
+<p class="font-body-md text-body-md text-on-background mb-1">Bisa dijadikan anchor Indo-Pasifik</p>
+<p class="font-meta-sm text-meta-sm text-warning-amber flex items-center">
+                                Misread sedang
+                            </p>
+</div>
+</div>
+<div class="flex items-start">
+<div class="w-8 text-xl mr-sm">🌍</div>
+<div class="flex-grow">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-0.5">ASEAN membaca Indonesia</p>
+<p class="font-body-md text-body-md text-on-background mb-1">Akan tetap memimpin kawasan</p>
+<p class="font-meta-sm text-meta-sm text-success-emerald flex items-center">
+<span class="material-symbols-outlined mr-1" style="font-size: 14px;">check</span>
+                                Misread rendah ✓
+                            </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Key Actors Minimal -->
+<div class="mb-xl">
+<h5 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-md border-b border-surface-variant pb-1">Profil Aktor Kunci</h5>
+<div class="space-y-md">
+<div class="flex items-start">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold font-label-md mr-md">XI</div>
+<div>
+<p class="font-label-md text-label-md text-on-background">Xi Jinping <span class="text-on-surface-variant font-normal">· China</span></p>
+<p class="font-meta-sm text-meta-sm text-on-surface-variant mt-0.5">Ideological · Tekanan domestik Sedang</p>
+</div>
+</div>
+<div class="flex items-start">
+<div class="w-10 h-10 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold font-label-md mr-md">PW</div>
+<div>
+<p class="font-label-md text-label-md text-on-background">Prabowo Subianto <span class="text-on-surface-variant font-normal">· Indonesia</span></p>
+<p class="font-meta-sm text-meta-sm text-on-surface-variant mt-0.5">Pragmatic · Tekanan domestik Sedang (Mulai naik)</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Game Changer Event Minimal -->
+<div class="mb-xl">
+<h5 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-md border-b border-surface-variant pb-1">Game Changer Event</h5>
+<div class="space-y-sm">
+<div class="flex items-start space-x-sm">
+<span class="material-symbols-outlined text-error mt-0.5" style="font-size: 18px;">gavel</span>
+<div>
+<p class="font-body-md text-body-md text-on-background">CCG masuk &lt;12nm dari Natuna (perairan teritorial) 'n trigger insiden langsung</p>
+<p class="font-meta-sm text-meta-sm text-error font-medium mt-1">Sangat kritis</p>
+</div>
+</div>
+<div class="flex items-start space-x-sm pt-2">
+<span class="material-symbols-outlined text-warning-amber mt-0.5" style="font-size: 18px;">trending_down</span>
+<div>
+<p class="font-body-md text-body-md text-on-background">Harga nikel turun di bawah $10k 'n tekanan fiskal RI naik 'n RFS naik +2 poin</p>
+<p class="font-meta-sm text-meta-sm text-warning-amber font-medium mt-1">Perlu diawasi</p>
+</div>
+</div>
+<div class="flex items-start space-x-sm pt-2">
+<span class="material-symbols-outlined text-warning-amber mt-0.5" style="font-size: 18px;">public</span>
+<div>
+<p class="font-body-md text-body-md text-on-background">Taiwan Strait memburuk 'n Indonesia dipaksa pilih antara Amerika atau China</p>
+<p class="font-meta-sm text-meta-sm text-warning-amber font-medium mt-1">Perlu diawasi</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Scenarios Minimal -->
+<div class="mb-xl">
+<h5 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-md border-b border-surface-variant pb-1">Skenario Proyeksi</h5>
+<div class="space-y-lg">
+<!-- Skenario 1 -->
+<div class="pl-3 border-l-2 border-success-emerald border-l-[6px]">
+<div class="flex justify-between items-end mb-2">
+<h6 class="font-headline-md text-headline-md text-on-background">1. Tidak ada eskalasi</h6>
+<span class="text-success-emerald font-bold text-lg">43%</span>
+</div>
+<p class="font-meta-sm text-meta-sm text-on-surface-variant mb-2 uppercase tracking-wide">Rung 2 — Posturing • Durasi: Gray Zone &gt;3 thn</p>
+<p class="font-body-md text-body-md text-on-background mb-4">Portofolio aman. Sektor pertambangan dan EV cenderung naik. Situasi membeku — tegang tapi tidak meledak selama bertahun-tahun.</p>
+<div class="mb-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Kepercayaan AI</p>
+<div class="flex items-center">
+<div class="w-full bg-surface-variant h-1 rounded-full mr-3">
+<div class="bg-success-emerald h-full rounded-full" style="width: 82%"></div>
+</div>
+<span class="text-success-emerald font-bold text-sm">82%</span>
+</div>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-2"><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Pertambangan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Perbankan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ EV &amp; Baterai</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-medium">↔ Properti</span><span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-medium">↔ Konsumer</span></div></p>
+<p class="font-meta-sm text-meta-sm text-on-background leading-relaxed"><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Pertambangan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Perbankan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ EV &amp; Baterai</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-medium">↔ Properti</span><span class="px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-medium">↔ Konsumer</span></div></p>
+</div>
+</div>
+<!-- Skenario 2 -->
+<div class="pl-3 border-l-2 border-warning-amber mt-lg border-l-[6px]">
+<div class="flex justify-between items-end mb-2">
+<h6 class="font-headline-md text-headline-md text-on-background">2. Indonesia terpaksa pilih satu blok</h6>
+<span class="text-warning-amber font-bold text-lg">29%</span>
+</div>
+<p class="font-meta-sm text-meta-sm text-on-surface-variant mb-2 uppercase tracking-wide">Rung 3 — Ekonomi • Durasi: 1-2 tahun</p>
+<p class="font-body-md text-body-md text-on-background mb-4">IHSG turun 12-20%. IDR tertekan ke 16.500+. Emas dan saham pertahanan diuntungkan.</p>
+<div class="bg-surface-container-low p-3 rounded mb-4">
+<p class="font-label-sm text-label-sm text-on-background font-semibold mb-2">Financial Warfare Inventory</p>
+<ul class="font-meta-sm text-meta-sm text-on-surface-variant space-y-2">
+<li class=""><span class="mr-1">🇨🇳</span> China: stop nikel offtake + freeze OBOR disbursement $6.8M + kurangi turis</li>
+<li class=""><span class="mr-1">🇺🇸</span> AS: cabut GSP (tarif preferensial) + IMF conditionality pressure + SWIFT pressure</li>
+</ul>
+</div>
+<div class="mb-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Kepercayaan AI</p>
+<div class="flex items-center">
+<div class="w-full bg-surface-variant h-1 rounded-full mr-3">
+<div class="bg-warning-amber h-full rounded-full" style="width: 71%"></div>
+</div>
+<span class="text-warning-amber font-bold text-sm">71%</span>
+</div>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-2"><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Teknologi</span><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Telekomunikasi</span><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Pariwisata</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Pertahanan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Emas &amp; Logam</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-warning-amber/10 text-warning-amber font-medium">! Perbankan</span></div></p>
+<p class="font-meta-sm text-meta-sm text-on-background leading-relaxed"><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Teknologi</span><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Telekomunikasi</span><span class="px-2 py-0.5 rounded bg-error-rose/10 text-error font-medium">↓ Pariwisata</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Pertahanan</span><span class="px-2 py-0.5 rounded bg-success-emerald/10 text-success-emerald font-medium">↑ Emas &amp; Logam</span></div><div class="flex flex-wrap gap-2 mt-2"><span class="px-2 py-0.5 rounded bg-warning-amber/10 text-warning-amber font-medium">! Perbankan</span></div></p>
+</div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center border-t border-surface-variant pt-sm mt-md">
+<div class="text-xs text-on-surface-variant leading-relaxed">
+                            Sudah Berlangsung 32 Hari<br>
+<span class="font-medium text-on-background">Potensi Keberlanjutan 3 bulan</span>
+</div>
+<button class="flex items-center space-x-xs font-label-md text-label-md text-primary hover:text-primary-container transition-colors">
+<span class="">Collapse</span>
+<span class="material-symbols-outlined text-[18px]">expand_less</span>
+</button>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="fixed bottom-0 w-full z-50 border-t border-surface-variant dark:border-outline-variant shadow-lg dark:shadow-none flex justify-around items-center bg-background dark:bg-background pb-safe md:hidden"><a class="flex flex-col items-center justify-center pt-2 w-1/5 hover:text-primary transition-colors active:opacity-80 text-on-surface-variant dark:text-surface-variant" href="#"><span class="material-symbols-outlined mb-1">home</span><span class="font-label-sm text-label-sm">Beranda</span></a><a class="flex flex-col items-center justify-center pt-2 w-1/5 hover:text-primary transition-colors active:opacity-80 text-primary dark:text-primary-fixed-dim border-t-2 border-primary dark:border-primary-fixed-dim" href="#"><span class="material-symbols-outlined mb-1 fill">schedule</span><span class="font-label-sm text-label-sm fill">Analisa</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant pt-2 w-1/5 hover:text-primary transition-colors active:opacity-80" href="#"><span class="material-symbols-outlined mb-1">thermostat</span><span class="font-label-sm text-label-sm">Dampak</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant pt-2 w-1/5 hover:text-primary transition-colors active:opacity-80" href="#"><span class="material-symbols-outlined mb-1">diamond</span><span class="font-label-sm text-label-sm">Treasury</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant pt-2 w-1/5 hover:text-primary transition-colors active:opacity-80" href="#"><span class="material-symbols-outlined mb-1">person</span><span class="font-label-sm text-label-sm">Profil</span></a></nav>
+
+
+
+
+
+
+</body></html>
