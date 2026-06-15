@@ -38,6 +38,8 @@ interface AuthContextValue {
   loadMe: () => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  requestWaOtp: (phone: string) => Promise<boolean>;
+  verifyWaOtp: (phone: string, code: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -110,6 +112,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }),
     [run],
+  );
+
+  const requestWaOtp = useCallback(
+    (phone: string) =>
+      run(async () => {
+        await apiClient.post(endpoints.waRequestOtp, { phone: phone.trim() });
+        return true;
+      }),
+    [run],
+  );
+
+  const verifyWaOtp = useCallback(
+    (phone: string, code: string) =>
+      run(async () => {
+        const res = await apiClient.post(endpoints.waVerifyOtp, {
+          phone: phone.trim(),
+          code: code.trim(),
+        });
+        await persistTokens(res.data);
+        if (res.data?.user) setUser(parseUser(res.data.user));
+        return true;
+      }),
+    [run, persistTokens],
   );
 
   const refresh = useCallback(async (): Promise<boolean> => {
@@ -185,6 +210,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loadMe,
       logout,
       clearError,
+      requestWaOtp,
+      verifyWaOtp,
     }),
     [
       user,
@@ -195,6 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       refresh,
+      requestWaOtp,
+      verifyWaOtp,
       loadMe,
       logout,
       clearError,

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -104,6 +105,15 @@ export default function LoginScreen() {
             <Link href="/(auth)/register" asChild>
               <Text style={styles.link}>Don&apos;t have an account? Register</Text>
             </Link>
+
+            <Text style={styles.divider}>atau</Text>
+            <Pressable
+              style={styles.waBtn}
+              onPress={() => router.push('/(auth)/whatsapp')}
+              disabled={loading}
+            >
+              <Text style={styles.waText}>Masuk dengan WhatsApp</Text>
+            </Pressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -144,4 +154,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
   },
+  divider: {
+    ...typography.caption,
+    textAlign: 'center',
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+  },
+  waBtn: {
+    backgroundColor: colors.successDark,
+    borderColor: colors.successBorder,
+    borderWidth: borders.hairline,
+    borderRadius: radii.inner,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+  },
+  waText: { ...typography.titleSm, color: colors.success },
 });

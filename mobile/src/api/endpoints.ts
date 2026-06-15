@@ -16,6 +16,8 @@ export const endpoints = {
   login: '/auth/login',
   refresh: '/auth/refresh',
   logout: '/auth/logout',
+  waRequestOtp: '/auth/wa/request-otp',
+  waVerifyOtp: '/auth/wa/verify-otp',
 
   // ── Users ─────────────────────────────────────────────────
   me: '/users/me',
