@@ -11,10 +11,14 @@ Optional: pass a phone/email of an existing user for the personal-impact step.
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select
+# Allow running as `python scripts/simulate_flow.py` (add repo root to path).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from sqlalchemy import func, select  # noqa: E402
 
 from app.core.database import AsyncSessionLocal
 from app.models.crisis import Crisis

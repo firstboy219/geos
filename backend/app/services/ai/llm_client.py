@@ -6,6 +6,7 @@ Imports of provider SDKs are lazy.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import math
@@ -14,6 +15,42 @@ import re
 from app.core.settings_store import get_ai_config
 
 logger = logging.getLogger("geoscan.ai.llm")
+
+_RETRYABLE = ("RESOURCE_EXHAUSTED", "429", "UNAVAILABLE", "503", "500", "INTERNAL")
+
+
+def _retry_delay(msg: str, fallback: float) -> float:
+    """Honour the server-suggested retry delay if present, else fallback."""
+    m = re.search(r"retry in ([0-9.]+)s", msg) or re.search(r"['\"]?([0-9.]+)s['\"]?", msg)
+    try:
+        return min(65.0, float(m.group(1)) + 1.0) if m else fallback
+    except Exception:  # noqa: BLE001
+        return fallback
+
+
+async def _with_retry(make_call, *, retries: int = 5, base: float = 6.0):
+    """Run an async LLM call, retrying on rate-limit / transient errors.
+
+    Respects the API's suggested retryDelay (e.g. free-tier 429s). Raises the
+    last error if non-retryable or attempts exhausted."""
+    last: Exception | None = None
+    for attempt in range(retries):
+        try:
+            return await make_call()
+        except Exception as exc:  # noqa: BLE001
+            s = str(exc)
+            last = exc
+            # Daily quota caps won't clear within our retry window — fail fast.
+            if "PerDay" in s:
+                raise
+            if not any(t in s for t in _RETRYABLE) or attempt == retries - 1:
+                raise
+            delay = _retry_delay(s, base * (attempt + 1))
+            logger.warning("LLM call rate-limited; retry %d/%d in %.0fs",
+                           attempt + 1, retries, delay)
+            await asyncio.sleep(delay)
+    assert last is not None
+    raise last
 
 # cache clients by (provider, api_key) so a CMS key/provider change rebuilds them
 _clients: dict[tuple[str, str], object] = {}
@@ -71,19 +108,26 @@ async def embed_text(text: str, *, task_type: str = "RETRIEVAL_DOCUMENT") -> lis
     dim = int(cfg.get("embedding_dimension") or 1536)
     if cfg["provider"] == "openai":
         client = _openai(cfg["api_key"])
-        resp = await client.embeddings.create(
-            model=cfg["embedding_model"], input=text, dimensions=dim
-        )
-        return _normalize(list(resp.data[0].embedding))
+
+        async def _do_openai():
+            resp = await client.embeddings.create(
+                model=cfg["embedding_model"], input=text, dimensions=dim
+            )
+            return _normalize(list(resp.data[0].embedding))
+
+        return await _with_retry(_do_openai)
     # gemini
     from google.genai import types  # lazy
 
-    resp = await _gemini(cfg["api_key"]).aio.models.embed_content(
-        model=cfg["embedding_model"],
-        contents=text,
-        config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=dim),
-    )
-    return _normalize(list(resp.embeddings[0].values))
+    async def _do_gemini():
+        resp = await _gemini(cfg["api_key"]).aio.models.embed_content(
+            model=cfg["embedding_model"],
+            contents=text,
+            config=types.EmbedContentConfig(task_type=task_type, output_dimensionality=dim),
+        )
+        return _normalize(list(resp.embeddings[0].values))
+
+    return await _with_retry(_do_gemini)
 
 
 # ── Generation ──
@@ -91,45 +135,61 @@ async def generate_json(system: str, user: str, *, temperature: float = 0.3) -> 
     cfg = await get_ai_config()
     if cfg["provider"] == "openai":
         client = _openai(cfg["api_key"])
-        resp = await client.chat.completions.create(
-            model=cfg["analysis_model"],
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=temperature,
-            response_format={"type": "json_object"},
-        )
-        return _extract_json(resp.choices[0].message.content)
+
+        async def _do_openai():
+            resp = await client.chat.completions.create(
+                model=cfg["analysis_model"],
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+                temperature=temperature,
+                response_format={"type": "json_object"},
+            )
+            return _extract_json(resp.choices[0].message.content)
+
+        return await _with_retry(_do_openai)
     from google.genai import types  # lazy
 
-    resp = await _gemini(cfg["api_key"]).aio.models.generate_content(
-        model=cfg["analysis_model"],
-        contents=user,
-        config=types.GenerateContentConfig(
-            system_instruction=system,
-            temperature=temperature,
-            response_mime_type="application/json",
-        ),
-    )
-    return _extract_json(resp.text)
+    async def _do_gemini():
+        resp = await _gemini(cfg["api_key"]).aio.models.generate_content(
+            model=cfg["analysis_model"],
+            contents=user,
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                temperature=temperature,
+                response_mime_type="application/json",
+            ),
+        )
+        return _extract_json(resp.text)
+
+    return await _with_retry(_do_gemini)
 
 
 async def generate_text(system: str, user: str, *, temperature: float = 0.6) -> str:
     cfg = await get_ai_config()
     if cfg["provider"] == "openai":
         client = _openai(cfg["api_key"])
-        resp = await client.chat.completions.create(
-            model=cfg["analysis_model"],
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            temperature=temperature,
-        )
-        return (resp.choices[0].message.content or "").strip()
+
+        async def _do_openai():
+            resp = await client.chat.completions.create(
+                model=cfg["analysis_model"],
+                messages=[{"role": "system", "content": system},
+                          {"role": "user", "content": user}],
+                temperature=temperature,
+            )
+            return (resp.choices[0].message.content or "").strip()
+
+        return await _with_retry(_do_openai)
     from google.genai import types  # lazy
 
-    resp = await _gemini(cfg["api_key"]).aio.models.generate_content(
-        model=cfg["analysis_model"],
-        contents=user,
-        config=types.GenerateContentConfig(system_instruction=system, temperature=temperature),
-    )
-    return (resp.text or "").strip()
+    async def _do_gemini():
+        resp = await _gemini(cfg["api_key"]).aio.models.generate_content(
+            model=cfg["analysis_model"],
+            contents=user,
+            config=types.GenerateContentConfig(system_instruction=system, temperature=temperature),
+        )
+        return (resp.text or "").strip()
+
+    return await _with_retry(_do_gemini)
 
 
 async def ai_smoke_test() -> dict:
