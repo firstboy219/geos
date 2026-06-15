@@ -1,6 +1,6 @@
 """Auth & user endpoints (/auth, /users)."""
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,9 +17,11 @@ from app.schemas.auth import (
     UserMeResponse,
     UserResponse,
     UserUpdateRequest,
+    WaOtpRequest,
+    WaVerifyRequest,
 )
 from app.schemas.common import MessageResponse
-from app.services import auth_service
+from app.services import auth_service, wa_auth
 
 router = APIRouter(tags=["auth"])
 _bearer = HTTPBearer(auto_error=False)
@@ -44,6 +46,33 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ) -> LoginResponse:
     user = await auth_service.authenticate(db, str(payload.email), payload.password)
+    tokens = create_token_pair(str(user.id))
+    return LoginResponse(
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"],
+        user=UserResponse.model_validate(user),
+    )
+
+
+@router.post("/auth/wa/request-otp", response_model=MessageResponse)
+@limiter.limit("3/15minutes")
+async def wa_request_otp(request: Request, payload: WaOtpRequest) -> MessageResponse:
+    try:
+        await wa_auth.request_otp(payload.phone)
+    except wa_auth.OtpError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=str(exc))
+    return MessageResponse(message="Kode OTP dikirim via WhatsApp.")
+
+
+@router.post("/auth/wa/verify-otp", response_model=LoginResponse)
+@limiter.limit("10/15minutes")
+async def wa_verify_otp(
+    request: Request, payload: WaVerifyRequest, db: AsyncSession = Depends(get_db)
+) -> LoginResponse:
+    user = await wa_auth.verify_otp(db, payload.phone, payload.code)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Kode OTP salah atau kedaluwarsa.")
     tokens = create_token_pair(str(user.id))
     return LoginResponse(
         access_token=tokens["access_token"],

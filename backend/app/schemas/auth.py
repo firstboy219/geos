@@ -22,6 +22,15 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class WaOtpRequest(BaseModel):
+    phone: str = Field(min_length=6, max_length=32)
+
+
+class WaVerifyRequest(BaseModel):
+    phone: str = Field(min_length=6, max_length=32)
+    code: str = Field(min_length=4, max_length=8)
+
+
 class TokenPair(BaseModel):
     access_token: str
     refresh_token: str

@@ -1,0 +1,38 @@
+{
+  "name": "WF-12 — WhatsApp OTP (login)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wa-otp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "wh",
+      "name": "Webhook /wa-otp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [ -360, 300 ],
+      "webhookId": "geoscan-wa-otp"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "677680658761861",
+        "recipientPhoneNumber": "={{ $json.body.phone }}",
+        "textBody": "=Kode OTP Geoscan Anda: *{{ $json.body.code }}*\nBerlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.",
+        "additionalFields": {}
+      },
+      "id": "wa",
+      "name": "Send WhatsApp OTP",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1,
+      "position": [ -140, 300 ],
+      "credentials": { "whatsAppApi": { "id": "5fSTMpuaL7hJQ38J", "name": "WhatsApp account" } }
+    }
+  ],
+  "connections": {
+    "Webhook /wa-otp": { "main": [ [ { "node": "Send WhatsApp OTP", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
