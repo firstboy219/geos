@@ -13,6 +13,7 @@ from app.models.scenario_mutation import ScenarioMutation
 from app.models.tripwire import Tripwire
 from app.models.tripwire_event import TripwireEvent
 from app.models.user import User
+from app.models.user_asset import UserAsset
 from app.models.user_portfolio import UserPortfolio
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "Tripwire",
     "TripwireEvent",
     "User",
+    "UserAsset",
     "UserPortfolio",
 ]

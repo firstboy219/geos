@@ -62,6 +62,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="dampak/me" />
           <Stack.Screen name="profile/edit" />
+          <Stack.Screen name="treasury/edit" />
           <Stack.Screen
             name="vectors/[crisisId]"
             options={{ ...headerOptions, title: "Impact Vector" }}

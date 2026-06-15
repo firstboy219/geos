@@ -42,7 +42,7 @@ export default function TabsLayout() {
         options={{ title: 'Dampak', tabBarIcon: tabIcon('thermostat') }}
       />
       <Tabs.Screen
-        name="portfolio"
+        name="treasury"
         options={{ title: 'Treasury', tabBarIcon: tabIcon('diamond') }}
       />
       <Tabs.Screen
@@ -52,6 +52,7 @@ export default function TabsLayout() {
       {/* Routes kept for deep-links but not shown as their own tab. */}
       <Tabs.Screen name="vectors" options={{ href: null }} />
       <Tabs.Screen name="pasar" options={{ href: null }} />
+      <Tabs.Screen name="portfolio" options={{ href: null }} />
     </Tabs>
   );
 }

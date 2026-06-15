@@ -12,6 +12,7 @@ from app.api.v1 import (
     pasar,
     portfolio,
     scenarios,
+    treasury,
     ws,
 )
 
@@ -20,6 +21,7 @@ api_router.include_router(auth.router)
 api_router.include_router(crises.router)
 api_router.include_router(news.router)
 api_router.include_router(impacts.router)
+api_router.include_router(treasury.router)
 api_router.include_router(scenarios.router)
 api_router.include_router(actors.router)
 api_router.include_router(alerts.router)

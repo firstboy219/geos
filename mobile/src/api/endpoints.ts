@@ -37,6 +37,10 @@ export const endpoints = {
   impacts: '/impacts',
   personalImpact: '/impacts/personal',
 
+  // ── Treasury (user assets) ────────────────────────────────
+  treasury: '/treasury',
+  treasuryAsset: (id: string) => `/treasury/${id}`,
+
   // ── Actors ────────────────────────────────────────────────
   actors: '/actors',
   actor: (id: string) => `/actors/${id}`,
