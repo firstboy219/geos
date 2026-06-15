@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #f7f5f0;
+  color: #111111;
+  font-family: Georgia, "Times New Roman", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Newspaper drop-cap for lead deck */
+.dropcap::first-letter {
+  font-size: 3.2rem;
+  line-height: 2.6rem;
+  float: left;
+  padding: 0.1rem 0.5rem 0 0;
+  font-weight: 700;
+}
+
+/* Column rules for the article grid on wide screens */
+@media (min-width: 768px) {
+  .col-rules > * {
+    border-left: 1px solid #d8d4cc;
+    padding-left: 1.25rem;
+  }
+  .col-rules > *:first-child {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+a {
+  color: inherit;
+}
