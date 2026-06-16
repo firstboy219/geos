@@ -62,7 +62,7 @@ def translate_news_task(max_articles: int = 300) -> dict:
 
 
 @celery_app.task(name="summarize_news")
-def summarize_news_task(max_articles: int = 200) -> dict:
+def summarize_news_task(max_articles: int = 2000) -> dict:
     from app.services.ai import pipeline
 
     logger.info("summarize_news: max=%s", max_articles)

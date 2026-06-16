@@ -52,8 +52,8 @@ async def run_translate_news(max_articles: int = 300) -> dict:
         return await translate_news(db, max_articles=max_articles)
 
 
-async def run_summarize_news(max_articles: int = 200) -> dict:
-    """Home-news — AI summarize (points + quotes) for ingested articles."""
+async def run_summarize_news(max_articles: int = 2000) -> dict:
+    """Home-news — extract points + quotes (non-AI) for ingested articles."""
     from app.services.ai.summarizer import summarize_news
 
     async with AsyncSessionLocal() as db:
