@@ -30,6 +30,8 @@ class NewsArticle(Base):
     # quotes = [{text, cite}] verbatim quotes from people in the article.
     summary_points: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     summary_quotes: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
+    # Cached embedding vector (so re-clustering/threshold tuning costs no quota).
+    embedding: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)
     credibility_score: Mapped[float] = mapped_column(Float, default=0.7)
     crisis_id: Mapped[uuid.UUID | None] = mapped_column(

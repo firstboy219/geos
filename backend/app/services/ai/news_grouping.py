@@ -31,7 +31,7 @@ logger = logging.getLogger("geoscan.ai.grouping")
 
 SIT_COLLECTION = "geoscan_situations"
 DIM = settings.PINECONE_DIMENSION
-DEFAULT_THRESHOLD = 0.72          # "Sedang" granularity
+DEFAULT_THRESHOLD = 0.86          # Gemini embeddings sit high; ~0.86 separates topics
 MIN_CLUSTER_SIZE = 2              # ≥2 related articles ⇒ a real situation
 MAX_PER_RUN = 600
 _EMBED_CONCURRENCY = 4
@@ -219,8 +219,16 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
         return {"processed": 0, "assigned_existing": 0, "new_situations": 0,
                 "leftover_singletons": 0, "situations": []}
 
-    # 3. Embed.
-    vecs = await _embed_articles(arts)
+    # 3. Embed — reuse cached embeddings, only embed the ones missing (so
+    #    re-clustering at a new threshold costs no embedding quota).
+    missing = [a for a in arts if not a.embedding]
+    if missing:
+        new_vecs = await _embed_articles(missing)
+        for a, v in zip(missing, new_vecs):
+            if v:
+                a.embedding = v
+        await db.commit()
+    vecs = [a.embedding for a in arts]
 
     # 4. Greedy online clustering.
     assigned_existing = 0

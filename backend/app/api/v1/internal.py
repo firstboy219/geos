@@ -15,6 +15,7 @@ from app.celery_app import (
     translate_news_task,
     summarize_news_task,
     group_news_task,
+    recluster_task,
     purge_old_news_task,
     generate_scenarios_task,
     generate_missing_scenarios_task,
@@ -236,6 +237,17 @@ async def task_group_news(
 ) -> TaskAcceptedResponse:
     """Layer 2 — manually trigger news→situation clustering (backfill/n8n)."""
     result = group_news_task.delay(threshold, max_articles)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/recluster", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_recluster(
+    request: Request,
+    threshold: float | None = Query(None, ge=0.4, le=0.99),
+) -> TaskAcceptedResponse:
+    """Reset auto situations + re-cluster from cached embeddings (tune threshold)."""
+    result = recluster_task.delay(threshold)
     return TaskAcceptedResponse(task_id=result.id)
 
 

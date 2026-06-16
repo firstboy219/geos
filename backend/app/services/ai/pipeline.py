@@ -68,6 +68,18 @@ async def run_group_news(threshold: float | None = None, max_articles: int = 600
         return await group_news(db, threshold=threshold, max_articles=max_articles)
 
 
+async def run_recluster(threshold: float | None = None) -> dict:
+    """Reset auto situations + re-cluster from CACHED embeddings (no quota)."""
+    from app.services import internal_service
+    from app.services.ai.news_grouping import group_news
+
+    async with AsyncSessionLocal() as db:
+        reset = await internal_service.reset_auto_situations(db)
+    async with AsyncSessionLocal() as db:
+        grouped = await group_news(db, threshold=threshold)
+    return {"reset": reset, "group": grouped}
+
+
 async def run_purge_old_news(months: int = 4) -> dict:
     """Retention — delete ALL generated data older than `months` (situations,
     scenarios, impacts, news, personal impacts). Name kept for compatibility."""

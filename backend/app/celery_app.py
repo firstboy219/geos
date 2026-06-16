@@ -82,6 +82,14 @@ def group_news_task(threshold: float | None = None, max_articles: int = 600) -> 
     return res
 
 
+@celery_app.task(name="recluster")
+def recluster_task(threshold: float | None = None) -> dict:
+    from app.services.ai import pipeline
+
+    logger.info("recluster: threshold=%s", threshold)
+    return _run(pipeline.run_recluster(threshold))
+
+
 @celery_app.task(name="generate_scenarios", rate_limit="30/h", max_retries=1)
 def generate_scenarios_task(crisis_id: str, force: bool = False) -> dict:
     from app.services.ai import pipeline

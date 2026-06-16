@@ -123,6 +123,29 @@ async def purge_old_data(db: AsyncSession, *, months: int = 4) -> dict:
     return {"cutoff": cutoff.isoformat(), "deleted": counts}
 
 
+async def reset_auto_situations(db: AsyncSession) -> dict:
+    """Detach articles from + delete all auto-grouped situations (for recluster).
+    FK-safe order (some FKs lack ondelete)."""
+    auto = select(Crisis.id).where(Crisis.auto_grouped.is_(True))
+    scen = select(Scenario.id).where(Scenario.crisis_id.in_(auto))
+    trip = select(Tripwire.id).where(Tripwire.crisis_id.in_(auto))
+    await db.execute(delete(ScenarioMutation).where(
+        ScenarioMutation.scenario_id.in_(scen) | ScenarioMutation.tripwire_id.in_(trip)))
+    await db.execute(delete(TripwireEvent).where(TripwireEvent.tripwire_id.in_(trip)))
+    await db.execute(delete(Scenario).where(Scenario.crisis_id.in_(auto)))
+    await db.execute(delete(Impact).where(Impact.crisis_id.in_(auto)))
+    await db.execute(delete(CrisisActor).where(CrisisActor.crisis_id.in_(auto)))
+    await db.execute(delete(Tripwire).where(Tripwire.crisis_id.in_(auto)))
+    await db.execute(
+        NewsArticle.__table__.update()
+        .where(NewsArticle.crisis_id.in_(auto))
+        .values(crisis_id=None)
+    )
+    res = await db.execute(delete(Crisis).where(Crisis.auto_grouped.is_(True)))
+    await db.commit()
+    return {"deleted_situations": int(res.rowcount or 0)}
+
+
 async def update_actor_statement(
     db: AsyncSession,
     *,
