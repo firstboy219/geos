@@ -6,6 +6,8 @@ export interface ImpactApiItem {
   id: string;
   crisis_id: string;
   crisis_title: string | null;
+  scenario_id: string | null;
+  scenario_name: string | null;
   category: string;
   title: string;
   direction: ImpactDir | null;
@@ -25,10 +27,18 @@ export interface ImpactRow {
   detail: string | null;
 }
 
+/** Impacts under one scenario of a situation (D1). */
+export interface ScenarioImpacts {
+  scenarioId: string | null;
+  scenarioName: string | null;
+  impacts: ImpactRow[];
+}
+
 export interface SituationImpacts {
   crisisId: string;
   title: string;
-  impacts: ImpactRow[];
+  /** Impacts grouped by scenario (scenarioId null = not tied to a scenario). */
+  scenarios: ScenarioImpacts[];
 }
 
 /** Category filter chips: label shown ↔ backend `category` value (null = all). */
@@ -56,32 +66,27 @@ function toRow(it: ImpactApiItem): ImpactRow {
   };
 }
 
-/** Group a flat impacts list into situations, preserving order. */
+/**
+ * Group a flat impacts list into situations → scenarios → impacts, preserving
+ * order (the API already orders by crisis then scenario).
+ */
 export function groupImpacts(items: ImpactApiItem[]): SituationImpacts[] {
-  const map = new Map<string, SituationImpacts>();
+  const sitMap = new Map<string, SituationImpacts>();
   for (const it of items) {
-    const key = it.crisis_id;
-    let g = map.get(key);
-    if (!g) {
-      g = { crisisId: key, title: it.crisis_title ?? "Situasi", impacts: [] };
-      map.set(key, g);
+    let sit = sitMap.get(it.crisis_id);
+    if (!sit) {
+      sit = { crisisId: it.crisis_id, title: it.crisis_title ?? "Situasi", scenarios: [] };
+      sitMap.set(it.crisis_id, sit);
     }
-    g.impacts.push(toRow(it));
+    const scenKey = it.scenario_id ?? "__none__";
+    let scen = sit.scenarios.find(
+      (s) => (s.scenarioId ?? "__none__") === scenKey,
+    );
+    if (!scen) {
+      scen = { scenarioId: it.scenario_id, scenarioName: it.scenario_name, impacts: [] };
+      sit.scenarios.push(scen);
+    }
+    scen.impacts.push(toRow(it));
   }
-  return [...map.values()];
+  return [...sitMap.values()];
 }
-
-// ── Demo fallback ───────────────────────────────────────────
-export const DEMO_IMPACTS: SituationImpacts[] = [
-  {
-    crisisId: "demo-iran",
-    title: "Eskalasi Iran vs Amerika",
-    impacts: [
-      { id: "d1", category: "energy", title: "Harga BBM retail naik", direction: "up", severity: "high", timeframe: "1-3 bulan", detail: "Gangguan jalur minyak Selat Hormuz menekan pasokan global." },
-      { id: "d2", category: "general", title: "Ekspor-impor melambat", direction: "down", severity: "medium", timeframe: "3-6 bulan", detail: "Biaya logistik & asuransi pelayaran naik tajam." },
-      { id: "d3", category: "gold", title: "Emas menguat (safe haven)", direction: "up", severity: "high", timeframe: "segera", detail: "Permintaan aset lindung nilai melonjak." },
-      { id: "d4", category: "stocks", title: "IHSG tertekan", direction: "down", severity: "medium", timeframe: "1-2 bulan", detail: "Risk-off; asing keluar dari pasar berkembang." },
-      { id: "d5", category: "forex", title: "USD menguat, IDR melemah", direction: "mixed", severity: "medium", timeframe: "1-3 bulan", detail: "Aliran dana ke dolar sebagai safe haven." },
-    ],
-  },
-];

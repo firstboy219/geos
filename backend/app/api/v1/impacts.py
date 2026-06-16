@@ -10,6 +10,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.limiter import limiter, user_or_ip_key
 from app.models.crisis import Crisis
 from app.models.impact import Impact
+from app.models.scenario import Scenario
 from app.models.user import User
 from app.schemas.common import PaginatedResponse
 from app.schemas.impact import (
@@ -33,7 +34,11 @@ async def list_impacts(
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[ImpactItem]:
-    base = select(Impact, Crisis.title).join(Crisis, Crisis.id == Impact.crisis_id)
+    base = (
+        select(Impact, Crisis.title, Scenario.name)
+        .join(Crisis, Crisis.id == Impact.crisis_id)
+        .outerjoin(Scenario, Scenario.id == Impact.scenario_id)
+    )
     count_stmt = select(func.count(Impact.id))
     if category:
         base = base.where(Impact.category == category)
@@ -43,15 +48,22 @@ async def list_impacts(
         count_stmt = count_stmt.where(Impact.crisis_id == crisis_id)
 
     total = int(await db.scalar(count_stmt) or 0)
+    # Order by situation then scenario so the app can render
+    # situation -> scenario -> impacts groups.
     rows = (
         await db.execute(
-            base.order_by(Impact.created_at.desc()).offset((page - 1) * size).limit(size)
+            base.order_by(
+                Impact.crisis_id, Impact.scenario_id, Impact.created_at.desc()
+            )
+            .offset((page - 1) * size)
+            .limit(size)
         )
     ).all()
     data = []
-    for imp, title in rows:
+    for imp, title, scenario_name in rows:
         item = ImpactItem.model_validate(imp)
         item.crisis_title = title
+        item.scenario_name = scenario_name
         data.append(item)
     return PaginatedResponse(data=data, total=total, page=page, size=size)
 

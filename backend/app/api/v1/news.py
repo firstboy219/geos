@@ -21,6 +21,7 @@ async def list_news(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     source: str | None = Query(None),
+    category: str | None = Query(None, description="Filter by news category"),
     summarized: bool = Query(False, description="Only articles with AI summary"),
     _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -30,6 +31,9 @@ async def list_news(
     if source:
         stmt = stmt.where(NewsArticle.source_name == source)
         count_stmt = count_stmt.where(NewsArticle.source_name == source)
+    if category:
+        stmt = stmt.where(NewsArticle.category == category)
+        count_stmt = count_stmt.where(NewsArticle.category == category)
     if summarized:
         stmt = stmt.where(NewsArticle.summary_points.isnot(None))
         count_stmt = count_stmt.where(NewsArticle.summary_points.isnot(None))

@@ -52,6 +52,14 @@ async def run_translate_news(max_articles: int = 300) -> dict:
         return await translate_news(db, max_articles=max_articles)
 
 
+async def run_classify_news(max_articles: int = 2000) -> dict:
+    """Non-AI keyword category classification — backfill rows where NULL."""
+    from app.services.news_classifier import classify_articles
+
+    async with AsyncSessionLocal() as db:
+        return await classify_articles(db, max_articles=max_articles)
+
+
 async def run_summarize_news(max_articles: int = 2000) -> dict:
     """Home-news — extract points + quotes (non-AI) for ingested articles."""
     from app.services.ai.summarizer import summarize_news

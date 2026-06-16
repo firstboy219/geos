@@ -18,6 +18,8 @@ export interface BeritaArticle {
   title: string;
   body: string;
   time: string;
+  /** Source article URL (opens in browser on tap). */
+  url?: string;
   /** Remote image (from RSS via backend); falls back to picsum by id. */
   image?: string;
   /** Pill badge (featured) — e.g. "Terkini". */
@@ -70,6 +72,7 @@ export function toArticle(it: NewsApiItem): BeritaArticle {
     title: it.title,
     body: points[0] ?? "",
     time: timeAgo(it.published_at ?? it.ingested_at),
+    url: it.url ?? undefined,
     image: it.image_url ?? undefined,
     intisari: points.length ? points : undefined,
     quotes: quotes.length ? quotes : undefined,
@@ -77,13 +80,20 @@ export function toArticle(it: NewsApiItem): BeritaArticle {
 }
 
 export function toLatest(it: NewsApiItem): LatestItem {
+  const points = (it.summary_points ?? []).filter(Boolean);
+  const quotes = (it.summary_quotes ?? [])
+    .filter((q) => q && q.text)
+    .map((q) => ({ text: q.text, cite: q.cite ?? "" }));
   return {
     id: it.id,
     source: it.source_name ?? "Sumber",
     title: it.title,
     time: timeAgo(it.published_at ?? it.ingested_at),
+    url: it.url ?? undefined,
     image: it.image_url ?? undefined,
     tone: "emerald",
+    intisari: points.length ? points : undefined,
+    quotes: quotes.length ? quotes : undefined,
   };
 }
 
@@ -113,6 +123,48 @@ export const CATEGORIES = [
   "Keamanan Siber",
   "Pertahanan",
 ];
+
+/**
+ * News-portal style category filter bar. The first entry ("Semua") sends NO
+ * category param; every other entry sends its lowercased label as `category`.
+ */
+export const NEWS_CATEGORIES = [
+  "Semua",
+  "Indonesia",
+  "Internasional",
+  "Politik",
+  "Ekonomi",
+  "Teknologi",
+  "Olahraga",
+  "Keamanan",
+  "Energi",
+  "Kesehatan",
+  "Hiburan",
+] as const;
+
+export type NewsCategory = (typeof NEWS_CATEGORIES)[number];
+
+/** Maps a category label to the `category` query value (null = no param). */
+export function categoryParam(label: NewsCategory): string | null {
+  return label === "Semua" ? null : label.toLowerCase();
+}
+
+/** True if a URL is safe to open in the browser (http/https only). */
+export function isOpenableUrl(url: string | undefined | null): url is string {
+  return !!url && /^https?:\/\//i.test(url);
+}
+
+/** Google favicon for a URL's domain, or null if no usable domain. */
+export function faviconFor(url: string | undefined | null): string | null {
+  if (!url) return null;
+  try {
+    const domain = new URL(url).hostname;
+    if (!domain) return null;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  } catch {
+    return null;
+  }
+}
 
 export const BRIEFS: BeritaArticle[] = [
   {
@@ -152,8 +204,11 @@ export interface LatestItem {
   source: string;
   title: string;
   time: string;
+  url?: string;
   image?: string;
   tone: DotTone;
+  intisari?: string[];
+  quotes?: Quote[];
 }
 
 export const LATEST: LatestItem[] = [

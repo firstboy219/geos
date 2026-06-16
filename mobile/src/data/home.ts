@@ -159,6 +159,8 @@ export interface CrisisModel {
   rfsScore: number;
   summaryText: string;
   cascadeNote: string;
+  /** A1 — region bucket for filtering: 'Internasional'|'Regional'|'Nasional'. */
+  region?: string;
   layerChips: CrisisLayerChipData[];
   perceptions: PerceptionRead[];
   actors: ActorModel[];
@@ -1772,30 +1774,43 @@ function severityToRisk(level: number): { level: RiskLevel; label: string } {
 }
 
 /**
- * Renders a live crisis where its fields map cleanly, falling back to the rich
- * dummy template (`DUMMY_CRISES[index]`) for the deep analysis content the API
- * does not yet expose (layers, perceptions, actors, scenarios, …).
+ * Builds a {@link CrisisModel} from a live situation using ONLY real backend
+ * fields. The deep analysis sections the API does not yet expose
+ * (perceptions/actors/pivotWatches/probabilityBars/scenarios/layerChips) are
+ * returned EMPTY — the UI shows an honest "sedang diproses" placeholder rather
+ * than unrelated dummy (Natuna) content. They populate once AI generation runs.
  *
  * Live-mapped: title, location (region/sub-region), risk level (severity),
- * redline/misread/CSI/RFS scores, credibility, gray-zone flag.
+ * redline/misread/CSI/RFS scores, credibility, gray-zone flag, region.
  */
-export function crisisFromLive(live: CrisisLike, index: number): CrisisModel {
-  const template = DUMMY_CRISES[index % DUMMY_CRISES.length];
+export function crisisFromLive(live: CrisisLike, _index: number): CrisisModel {
   const risk = severityToRisk(live.severityLevel);
   const credibility = Math.round(live.credibilityScore * 100);
   return {
-    ...template,
-    id: live.id || template.id,
-    title: live.title || template.title,
-    location: live.subRegion || live.region || template.location,
+    id: live.id,
+    flag: '🌐',
+    title: live.title,
+    location: live.subRegion || live.region || '',
     riskLevel: risk.level,
     riskLabel: risk.label,
-    credibilityScore: credibility > 0 ? credibility : template.credibilityScore,
+    statusText: '',
+    statusTone: 'neutral',
+    credibilityScore: credibility > 0 ? credibility : 0,
+    credibilityNote: '',
     grayZone: live.grayZone,
-    redlineIndex: live.redlineIndex || template.redlineIndex,
-    misreadScore: live.misreadScore || template.misreadScore,
-    csiScore: live.csiAverage || template.csiScore,
-    rfsScore: live.rfsAverage || template.rfsScore,
+    redlineIndex: live.redlineIndex,
+    misreadScore: live.misreadScore,
+    csiScore: live.csiAverage,
+    rfsScore: live.rfsAverage,
+    summaryText: '',
+    cascadeNote: '',
+    region: live.region || '',
+    layerChips: [],
+    perceptions: [],
+    actors: [],
+    pivotWatches: [],
+    probabilityBars: [],
+    scenarios: [],
   };
 }
 

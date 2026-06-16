@@ -24,6 +24,15 @@ DEFAULT_NEWS_SOURCES: list[dict] = [
     {"name": "Antara", "url": "https://www.antaranews.com/rss/terkini.xml", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
     {"name": "CNBC Indonesia", "url": "https://www.cnbcindonesia.com/rss", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
     {"name": "Tempo Nasional", "url": "https://rss.tempo.co/nasional", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "Tempo", "url": "https://rss.tempo.co/", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "Kompas", "url": "https://www.kompas.com/rss", "type": "rss", "credibility": 0.85, "lang": "id", "enabled": True},
+    {"name": "CNN Indonesia", "url": "https://www.cnnindonesia.com/rss", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "Liputan6", "url": "https://feed.liputan6.com/rss", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
+    {"name": "Kumparan", "url": "https://kumparan.com/feed", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
+    {"name": "Tribun", "url": "https://www.tribunnews.com/rss", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
+    {"name": "Republika", "url": "https://www.republika.co.id/rss", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
+    # NOTE: Detik was previously blocked from the datacenter IP — included anyway; may fail to fetch.
+    {"name": "Detik", "url": "https://rss.detik.com/index.php/detikcom", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
     {"name": "Google News (Indonesia)", "url": "https://news.google.com/rss/search?q=geopolitik%20OR%20ekonomi%20OR%20militer%20OR%20Natuna&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.65, "lang": "id", "enabled": True},
     # ── Trending / social / video ──
     {"name": "Google Trends ID", "url": "https://trends.google.com/trending/rss?geo=ID", "type": "trends", "credibility": 0.45, "lang": "id", "enabled": True},

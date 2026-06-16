@@ -28,6 +28,13 @@ class Impact(Base):
     crisis_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("crises.id", ondelete="CASCADE"), nullable=False
     )
+    # D1 — impacts derive per scenario of a situation (nullable: legacy/general
+    # impacts may not be tied to a specific scenario).
+    scenario_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("scenarios.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     category: Mapped[str] = mapped_column(String(30), default="general", nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     direction: Mapped[str | None] = mapped_column(String(10), nullable=True)  # up|down|neutral|mixed

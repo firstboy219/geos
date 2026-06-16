@@ -30,11 +30,15 @@ async def public_news(
     request: Request,
     page: int = Query(1, ge=1),
     size: int = Query(24, ge=1, le=100),
+    category: str | None = Query(None),
     summarized: bool = Query(False),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse[NewsFeedItem]:
     stmt = select(NewsArticle)
     count_stmt = select(func.count(NewsArticle.id))
+    if category:
+        stmt = stmt.where(NewsArticle.category == category)
+        count_stmt = count_stmt.where(NewsArticle.category == category)
     if summarized:
         stmt = stmt.where(NewsArticle.summary_points.isnot(None))
         count_stmt = count_stmt.where(NewsArticle.summary_points.isnot(None))

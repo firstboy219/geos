@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.models.news_article import NewsArticle
 
@@ -20,6 +21,36 @@ logger = logging.getLogger("geoscan.translator")
 _URL = "https://translate.googleapis.com/translate_a/single"
 _CONCURRENCY = 3
 _MAX_PER_RUN = 300
+
+# Common English function words. If a title has several of these AND lacks common
+# Indonesian markers, it was almost certainly stored mis-tagged as 'id' while
+# still being English → re-translate it.
+_EN_STOPWORDS = {
+    "the", "and", "of", "to", "in", "is", "for", "on", "with", "as",
+    "at", "by", "from", "that", "this", "was", "are", "be", "has", "have",
+}
+# Strong Indonesian markers — presence means the text is already Indonesian.
+_ID_MARKERS = {
+    "yang", "dan", "di", "ke", "dari", "untuk", "dengan", "ini", "itu",
+    "akan", "tidak", "adalah", "pada", "dalam", "para", "tahun", "juga",
+    "sebagai", "telah", "atau", "karena", "oleh", "menjadi",
+}
+_EN_HEURISTIC_MIN_HITS = 2
+_TOKEN_RE = re.compile(r"[a-zA-Z]+")
+
+
+def _looks_english(text: str | None) -> bool:
+    """Heuristic: title looks like English (mis-tagged as id). Conservative —
+    only True when several EN stopwords appear and no ID markers do."""
+    if not text:
+        return False
+    tokens = [t.lower() for t in _TOKEN_RE.findall(text)]
+    if not tokens:
+        return False
+    if any(t in _ID_MARKERS for t in tokens):
+        return False
+    en_hits = sum(1 for t in tokens if t in _EN_STOPWORDS)
+    return en_hits >= _EN_HEURISTIC_MIN_HITS
 
 
 async def translate_to_id(text: str | None, *, source: str = "auto") -> str | None:
@@ -41,14 +72,29 @@ async def translate_to_id(text: str | None, *, source: str = "auto") -> str | No
 
 
 async def translate_news(db, *, max_articles: int = _MAX_PER_RUN) -> dict:
-    rows = (
+    # Primary set: anything not already Indonesian. Plus a recovery set: rows
+    # tagged 'id' that were NEVER translated (title_original IS NULL) — some of
+    # these are mis-tagged English. We fetch those and filter with the English
+    # heuristic so we never re-translate genuinely-Indonesian text.
+    candidates = (
         await db.execute(
             select(NewsArticle)
-            .where(NewsArticle.language != "id")
+            .where(
+                or_(
+                    NewsArticle.language != "id",
+                    NewsArticle.title_original.is_(None),
+                )
+            )
             .order_by(NewsArticle.ingested_at.asc())
             .limit(max_articles)
         )
     ).scalars().all()
+
+    rows = [
+        a
+        for a in candidates
+        if a.language != "id" or _looks_english(a.title)
+    ]
     if not rows:
         return {"translated": 0}
 

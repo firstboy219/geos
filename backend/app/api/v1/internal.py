@@ -13,6 +13,7 @@ from app.celery_app import (
     trigger_mutation_task,
     analyze_statement_task,
     translate_news_task,
+    classify_news_task,
     summarize_news_task,
     group_news_task,
     recluster_task,
@@ -65,9 +66,11 @@ async def ingest_news(
     if new_ids:
         result = scan_articles_task.delay([str(i) for i in new_ids])
         task_id = result.id
-        # FIFO on the single worker: translate → ID first, then (AI) summarize,
-        # then Layer-2 grouping (embeds the Indonesian text).
+        # FIFO on the single worker: translate → ID first, then non-AI category
+        # classify (backfills any NULLs), then (AI) summarize, then Layer-2
+        # grouping (embeds the Indonesian text).
         translate_news_task.delay()
+        classify_news_task.delay()
         summarize_news_task.delay()
         group_news_task.delay()
     return NewsIngestResponse(
@@ -214,6 +217,17 @@ async def task_translate_news(
 ) -> TaskAcceptedResponse:
     """Translate ingested news → Bahasa Indonesia (non-AI backfill)."""
     result = translate_news_task.delay(max_articles)
+    return TaskAcceptedResponse(task_id=result.id)
+
+
+@router.post("/news/classify", response_model=TaskAcceptedResponse)
+@limiter.limit(_RL)
+async def task_classify_news(
+    request: Request,
+    max_articles: int = Query(2000, ge=1, le=10000),
+) -> TaskAcceptedResponse:
+    """Non-AI keyword category classification (backfill rows where NULL)."""
+    result = classify_news_task.delay(max_articles)
     return TaskAcceptedResponse(task_id=result.id)
 
 

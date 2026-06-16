@@ -66,13 +66,22 @@ export default function AnalisaScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cards: SituationCardData[] = crises.data.length
+  const selectedRegion = CATS[cat];
+  const allCards: SituationCardData[] = crises.data.length
     ? crises.data.map((c, i) => ({
         model: crisisFromLive(c, i),
         crisisId: c.id,
         newsCount: c.newsCount,
       }))
-    : DUMMY_CRISES.map((m) => ({ model: m }));
+    : // Offline demo fallback ONLY when the live list is completely empty.
+      DUMMY_CRISES.map((m) => ({ model: m }));
+
+  // A1 — client-side region filter over the already-fetched list. Live
+  // situations carry a real region; when the list is the offline demo (no
+  // region set) we show everything so the screen is never blank.
+  const cards = crises.data.length
+    ? allCards.filter((card) => (card.model.region || "") === selectedRegion)
+    : allCards;
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
@@ -133,17 +142,24 @@ export default function AnalisaScreen() {
           Situasi Kritis Saat ini :
         </Text>
 
-        <View className="gap-7">
-          {cards.map((card, i) => (
-            <SituationCard
-              key={card.model.id}
-              crisis={card.model}
-              index={i}
-              crisisId={card.crisisId}
-              newsCount={card.newsCount}
-            />
-          ))}
-        </View>
+        {cards.length === 0 ? (
+          <Text className="font-serif text-on-surface-variant text-center mt-8">
+            Belum ada situasi {selectedRegion.toLowerCase()} yang dipantau saat
+            ini.
+          </Text>
+        ) : (
+          <View className="gap-7">
+            {cards.map((card, i) => (
+              <SituationCard
+                key={card.model.id}
+                crisis={card.model}
+                index={i}
+                crisisId={card.crisisId}
+                newsCount={card.newsCount}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -281,36 +297,44 @@ function SituationCard({
       </View>
 
       {/* Summary */}
-      <Text
-        className="font-serif text-[17px] text-on-background leading-relaxed mb-4"
-        numberOfLines={open ? undefined : 3}
-      >
-        {crisis.summaryText}
-      </Text>
-
-      {/* Status box */}
-      <View className="bg-surface-container-low p-3 rounded border-l-[6px] border-success-emerald mb-4 flex-row gap-2">
-        <Sym name="circle" size={14} color={chronicle.emerald} style={{ marginTop: 2 }} />
-        <Text className="flex-1 font-inter text-[13px] text-on-background leading-relaxed">
-          {crisis.statusText}
+      {crisis.summaryText ? (
+        <Text
+          className="font-serif text-[17px] text-on-background leading-relaxed mb-4"
+          numberOfLines={open ? undefined : 3}
+        >
+          {crisis.summaryText}
         </Text>
-      </View>
+      ) : null}
 
-      {/* Probability */}
-      <Text className="font-inter text-[12px] text-on-surface-variant uppercase tracking-wide mb-2">
-        Apa yang paling mungkin terjadi:
-      </Text>
-      <View className="mb-4">
-        {bars.map((b, i) => (
-          <ProbBar
-            key={b.label}
-            label={b.label}
-            percent={b.percent}
-            tone={b.tone}
-            emphasize={i === 0}
-          />
-        ))}
-      </View>
+      {/* Status box (only when a real status exists) */}
+      {crisis.statusText ? (
+        <View className="bg-surface-container-low p-3 rounded border-l-[6px] border-success-emerald mb-4 flex-row gap-2">
+          <Sym name="circle" size={14} color={chronicle.emerald} style={{ marginTop: 2 }} />
+          <Text className="flex-1 font-inter text-[13px] text-on-background leading-relaxed">
+            {crisis.statusText}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Probability (only when real projection data exists) */}
+      {crisis.probabilityBars.length > 0 ? (
+        <>
+          <Text className="font-inter text-[12px] text-on-surface-variant uppercase tracking-wide mb-2">
+            Apa yang paling mungkin terjadi:
+          </Text>
+          <View className="mb-4">
+            {bars.map((b, i) => (
+              <ProbBar
+                key={b.label}
+                label={b.label}
+                percent={b.percent}
+                tone={b.tone}
+                emphasize={i === 0}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {open ? (
         <View>
@@ -342,6 +366,7 @@ function SituationCard({
           ) : null}
 
           {/* Regional sentiment */}
+          {crisis.perceptions.length > 0 ? (
           <View className="mb-7">
             <SectionLabel>Analisis Sentimen Regional</SectionLabel>
             <View className="gap-4">
@@ -367,8 +392,10 @@ function SituationCard({
               })}
             </View>
           </View>
+          ) : null}
 
           {/* Key actors */}
+          {crisis.actors.length > 0 ? (
           <View className="mb-7">
             <SectionLabel>Profil Aktor Kunci</SectionLabel>
             <View className="gap-4">
@@ -391,8 +418,10 @@ function SituationCard({
               ))}
             </View>
           </View>
+          ) : null}
 
           {/* Game changer */}
+          {crisis.pivotWatches.length > 0 ? (
           <View className="mb-7">
             <SectionLabel>Game Changer Event</SectionLabel>
             <View className="gap-3">
@@ -424,8 +453,10 @@ function SituationCard({
               })}
             </View>
           </View>
+          ) : null}
 
           {/* Scenarios */}
+          {crisis.scenarios.length > 0 ? (
           <View className="mb-7">
             <SectionLabel>Skenario Proyeksi</SectionLabel>
             <View className="gap-6">
@@ -488,6 +519,27 @@ function SituationCard({
               ))}
             </View>
           </View>
+          ) : null}
+
+          {/* Honest placeholder when no deep analysis exists yet (A2) */}
+          {crisis.perceptions.length === 0 &&
+          crisis.actors.length === 0 &&
+          crisis.pivotWatches.length === 0 &&
+          crisis.scenarios.length === 0 ? (
+            <View className="bg-surface-container-low p-4 rounded-lg border border-surface-variant flex-row items-start gap-2">
+              <Sym
+                name="hourglass_empty"
+                size={18}
+                color={chronicle.onSurfaceVariant}
+                style={{ marginTop: 2 }}
+              />
+              <Text className="flex-1 font-serif text-[15px] text-on-surface-variant leading-relaxed">
+                Analisa mendalam (16 lapis) sedang diproses. Skenario, profil
+                aktor, dan sentimen akan muncul di sini setelah situasi selesai
+                dianalisa.
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
 

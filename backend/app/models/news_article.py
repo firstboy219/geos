@@ -38,5 +38,9 @@ class NewsArticle(Base):
         UUID(as_uuid=True), ForeignKey("crises.id"), nullable=True
     )
     language: Mapped[str] = mapped_column(String(5), default="en", nullable=False)
+    # Non-AI keyword classification (see app.services.news_classifier). One of:
+    # indonesia, internasional, politik, ekonomi, teknologi, olahraga,
+    # keamanan, energi, kesehatan, hiburan.
+    category: Mapped[str | None] = mapped_column(String(30), nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(nullable=True)
     ingested_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)

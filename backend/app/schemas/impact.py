@@ -13,6 +13,8 @@ class ImpactItem(BaseModel):
     id: uuid.UUID
     crisis_id: uuid.UUID
     crisis_title: str | None = None
+    scenario_id: uuid.UUID | None = None
+    scenario_name: str | None = None
     category: str
     title: str
     direction: str | None = None

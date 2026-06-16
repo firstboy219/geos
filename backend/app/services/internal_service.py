@@ -22,6 +22,7 @@ from app.models.tripwire_event import TripwireEvent
 from app.models.user import User
 from app.models.user_portfolio import UserPortfolio
 from app.schemas.internal import MarketItemIn, NewsArticleIn
+from app.services.news_classifier import classify
 
 
 async def ingest_news(
@@ -47,17 +48,22 @@ async def ingest_news(
         if art.url in existing or art.url in seen:
             continue
         seen.add(art.url)
+        source_name = art.source_name or art.source
+        content_summary = art.content_summary or art.content
         row = NewsArticle(
             id=uuid.uuid4(),
             title=art.title,
-            source_name=art.source_name or art.source,
+            source_name=source_name,
             url=art.url,
             image_url=art.image_url,
-            content_summary=art.content_summary or art.content,
+            content_summary=content_summary,
             published_at=art.published_at,
             credibility_score=art.credibility_score,
             language=art.language,
             crisis_id=art.crisis_id,
+            # Non-AI keyword classification at insert (idempotent backfill task
+            # in news_classifier.classify_articles handles legacy rows).
+            category=classify(art.title, content_summary, source_name),
         )
         db.add(row)
         new_ids.append(row.id)

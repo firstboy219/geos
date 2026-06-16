@@ -8,7 +8,6 @@ import { endpoints } from "@/api/endpoints";
 import { Sym } from "@/components/chronicle/Sym";
 import { chronicle } from "@/theme/chronicle";
 import {
-  DEMO_IMPACTS,
   IMPACT_FILTERS,
   groupImpacts,
   type ImpactApiItem,
@@ -26,7 +25,7 @@ const DIR: Record<ImpactDir, { sym: string; color: string; cls: string }> = {
 /** Dampak — general consequences of situations, filterable by category (F2). */
 export default function DampakScreen() {
   const [filter, setFilter] = useState(0);
-  const [groups, setGroups] = useState<SituationImpacts[]>(DEMO_IMPACTS);
+  const [groups, setGroups] = useState<SituationImpacts[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -38,9 +37,9 @@ export default function DampakScreen() {
         });
         const items: ImpactApiItem[] = res.data?.data ?? res.data ?? [];
         if (!active) return;
-        setGroups(items.length ? groupImpacts(items) : cat ? [] : DEMO_IMPACTS);
+        setGroups(groupImpacts(items));
       } catch {
-        if (active && !cat) setGroups(DEMO_IMPACTS);
+        if (active) setGroups([]);
       }
     })();
     return () => {
@@ -108,9 +107,18 @@ export default function DampakScreen() {
         </ScrollView>
 
         {groups.length === 0 ? (
-          <Text className="font-serif text-on-surface-variant text-center px-5 mt-10">
-            Belum ada dampak untuk kategori ini.
-          </Text>
+          <View className="px-5 mt-12 items-center">
+            <Sym
+              name="hourglass_empty"
+              size={28}
+              color={chronicle.onSurfaceVariant}
+            />
+            <Text className="font-serif text-on-surface-variant text-center mt-3 leading-relaxed">
+              {IMPACT_FILTERS[filter]?.value
+                ? "Belum ada dampak untuk kategori ini."
+                : "Dampak akan muncul setelah situasi dianalisa."}
+            </Text>
+          </View>
         ) : (
           <View className="px-5 gap-6">
             {groups.map((g) => (
@@ -118,47 +126,58 @@ export default function DampakScreen() {
                 <Text className="font-ws-semi text-lg text-on-background mb-3">
                   {g.title}
                 </Text>
-                <View className="gap-3">
-                  {g.impacts.map((im) => {
-                    const d = DIR[im.direction];
-                    return (
-                      <View
-                        key={im.id}
-                        className="bg-surface-container-lowest rounded-xl p-4 border border-surface-variant"
-                      >
-                        <View className="flex-row items-start gap-2">
-                          <Sym name={d.sym} size={18} color={d.color} style={{ marginTop: 2 }} />
-                          <View className="flex-1">
-                            <Text className="font-ws-semi text-[15px] text-on-surface">
-                              {im.title}
-                            </Text>
-                            {im.detail ? (
-                              <Text className="font-serif text-[14px] text-on-surface-variant leading-relaxed mt-1">
-                                {im.detail}
-                              </Text>
-                            ) : null}
-                            <View className="flex-row items-center gap-2 mt-2">
-                              <View className="px-2 py-0.5 rounded bg-surface-container">
-                                <Text className="font-inter text-[11px] text-on-surface-variant uppercase">
-                                  {im.category}
-                                </Text>
+                <View className="gap-4">
+                  {g.scenarios.map((scen) => (
+                    <View key={scen.scenarioId ?? "none"}>
+                      {scen.scenarioName ? (
+                        <Text className="font-inter-medium text-[12px] text-on-surface-variant uppercase tracking-wide mb-2">
+                          {scen.scenarioName}
+                        </Text>
+                      ) : null}
+                      <View className="gap-3">
+                        {scen.impacts.map((im) => {
+                          const d = DIR[im.direction];
+                          return (
+                            <View
+                              key={im.id}
+                              className="bg-surface-container-lowest rounded-xl p-4 border border-surface-variant"
+                            >
+                              <View className="flex-row items-start gap-2">
+                                <Sym name={d.sym} size={18} color={d.color} style={{ marginTop: 2 }} />
+                                <View className="flex-1">
+                                  <Text className="font-ws-semi text-[15px] text-on-surface">
+                                    {im.title}
+                                  </Text>
+                                  {im.detail ? (
+                                    <Text className="font-serif text-[14px] text-on-surface-variant leading-relaxed mt-1">
+                                      {im.detail}
+                                    </Text>
+                                  ) : null}
+                                  <View className="flex-row items-center gap-2 mt-2">
+                                    <View className="px-2 py-0.5 rounded bg-surface-container">
+                                      <Text className="font-inter text-[11px] text-on-surface-variant uppercase">
+                                        {im.category}
+                                      </Text>
+                                    </View>
+                                    {im.timeframe ? (
+                                      <Text className="font-inter text-[11px] text-on-surface-variant">
+                                        {im.timeframe}
+                                      </Text>
+                                    ) : null}
+                                    {im.severity ? (
+                                      <Text className={`font-inter-medium text-[11px] ${d.cls}`}>
+                                        {im.severity}
+                                      </Text>
+                                    ) : null}
+                                  </View>
+                                </View>
                               </View>
-                              {im.timeframe ? (
-                                <Text className="font-inter text-[11px] text-on-surface-variant">
-                                  {im.timeframe}
-                                </Text>
-                              ) : null}
-                              {im.severity ? (
-                                <Text className={`font-inter-medium text-[11px] ${d.cls}`}>
-                                  {im.severity}
-                                </Text>
-                              ) : null}
                             </View>
-                          </View>
-                        </View>
+                          );
+                        })}
                       </View>
-                    );
-                  })}
+                    </View>
+                  ))}
                 </View>
               </View>
             ))}

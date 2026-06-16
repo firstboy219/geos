@@ -36,6 +36,102 @@ MIN_CLUSTER_SIZE = 2              # ≥2 related articles ⇒ a real situation
 MAX_PER_RUN = 600
 _EMBED_CONCURRENCY = 4
 
+# ── Region classification (Layer A1) ──────────────────────────
+# Region values written to Crisis.region (must match the mobile chips:
+# 'Internasional' | 'Regional' | 'Nasional').
+REGION_NASIONAL = "Nasional"
+REGION_REGIONAL = "Regional"
+REGION_INTERNASIONAL = "Internasional"
+
+# Indonesia-related → Nasional.
+_NASIONAL_KEYWORDS = (
+    "indonesia", "jakarta", "natuna", "ihsg", "rupiah", "idr ", "papua",
+    "aceh", "bali", "sumatra", "sumatera", "kalimantan", "sulawesi", "jawa",
+    "prabowo", "jokowi", "tni", "polri", "nkri", "bumn", "kpk", "dpr",
+)
+# Asia / ASEAN neighbourhood → Regional.
+_REGIONAL_KEYWORDS = (
+    "asean", "malaysia", "singapore", "singapura", "thailand", "vietnam",
+    "filipina", "philippines", "myanmar", "kamboja", "cambodia", "laos",
+    "brunei", "timor", "china", "tiongkok", "taiwan", "japan", "jepang",
+    "korea", "india", "asia", "laut china selatan", "south china sea",
+    "selat taiwan", "indo-pasifik", "indo-pacific", "pasifik",
+)
+
+
+def _classify_region(texts: list[str], langs: list[str]) -> str:
+    """Classify a situation's region from its member articles.
+
+    Heuristic, deterministic, non-AI:
+      * 'Nasional'      — Indonesia-related (id-language dominant, or Indonesia
+                          keyword hits).
+      * 'Regional'      — Asia/ASEAN keyword hits.
+      * 'Internasional' — everything else (the default).
+    """
+    blob = " ".join(t.lower() for t in texts if t)
+    id_langs = sum(1 for lang in langs if (lang or "").lower().startswith("id"))
+    nas_hits = sum(1 for kw in _NASIONAL_KEYWORDS if kw in blob)
+    reg_hits = sum(1 for kw in _REGIONAL_KEYWORDS if kw in blob)
+
+    # Indonesia-related dominates when keyword present, or the cluster is mostly
+    # Indonesian-language with at least one national signal.
+    if nas_hits >= 1 and (nas_hits >= reg_hits or id_langs > len(langs) / 2):
+        return REGION_NASIONAL
+    if reg_hits >= 1:
+        return REGION_REGIONAL
+    if id_langs > len(langs) / 2 and nas_hits >= 1:
+        return REGION_NASIONAL
+    return REGION_INTERNASIONAL
+
+
+# ── Theme merge (Layer A3 — concept-level clustering) ─────────
+# A second, deterministic pass that merges situations sharing a dominant
+# real-world THEME across countries (e.g. protests in Ghana + UK + USA become
+# one situation "Demo merebak di berbagai negara"). Keyword-based & safe: only
+# fires when the SAME theme is detected in ≥2 distinct situations.
+#
+# theme key -> (concept title, matching keywords)
+_THEMES: dict[str, tuple[str, tuple[str, ...]]] = {
+    "demo": (
+        "Demo merebak di berbagai negara",
+        ("demo", "protes", "protest", "rally", "unjuk rasa", "demonstrasi",
+         "demonstration", "kerusuhan", "riot"),
+    ),
+    "perang": (
+        "Eskalasi perang di berbagai kawasan",
+        ("perang", "war", "invasi", "invasion", "offensive", "gencatan",
+         "ceasefire"),
+    ),
+    "banjir": (
+        "Banjir melanda berbagai wilayah",
+        ("banjir", "flood", "flooding", "inundation"),
+    ),
+    "pemilu": (
+        "Pemilu di berbagai negara",
+        ("pemilu", "election", "pilpres", "vote", "ballot", "pemungutan suara"),
+    ),
+    "gempa": (
+        "Gempa mengguncang berbagai wilayah",
+        ("gempa", "earthquake", "seismic", "tsunami"),
+    ),
+    "serangan": (
+        "Serangan terjadi di berbagai tempat",
+        ("serangan", "attack", "bombing", "ledakan", "blast", "airstrike",
+         "shooting", "penembakan"),
+    ),
+}
+
+
+def _detect_theme(text: str) -> str | None:
+    """Return the theme key whose keywords most strongly match the text."""
+    low = (text or "").lower()
+    best_key, best_hits = None, 0
+    for key, (_title, kws) in _THEMES.items():
+        hits = sum(1 for kw in kws if kw in low)
+        if hits > best_hits:
+            best_key, best_hits = key, hits
+    return best_key if best_hits >= 1 else None
+
 
 # ── vector helpers ────────────────────────────────────────────
 def _cos(a: list[float], b: list[float]) -> float:
@@ -134,6 +230,9 @@ def _new_cluster(article: NewsArticle, vec: list[float], existing: bool, crisis_
         "member_ids": [] if existing else [article.id],
         "cred_sum": float(article.credibility_score or 0.7) if article else 0.0,
         "earliest": article.published_at if article else None,
+        # A1/A3 — accumulate signals for region & theme classification.
+        "texts": [_text_of(article)] if article else [],
+        "langs": [article.language] if article else [],
     }
 
 
@@ -143,6 +242,8 @@ def _add(cl: dict, a: NewsArticle, vec: list[float]) -> None:
     cl["centroid"] = _normalize(cl["sum"])
     cl["member_ids"].append(a.id)
     cl["cred_sum"] += float(a.credibility_score or 0.7)
+    cl.setdefault("texts", []).append(_text_of(a))
+    cl.setdefault("langs", []).append(a.language)
     if a.published_at and (cl["earliest"] is None or a.published_at < cl["earliest"]):
         cl["earliest"] = a.published_at
 
@@ -160,6 +261,56 @@ async def _embed_articles(articles: list[NewsArticle]) -> list[list[float] | Non
                 return None
 
     return list(await asyncio.gather(*[one(a) for a in articles]))
+
+
+async def _theme_merge(db, new_clusters: list[dict]) -> list[dict]:
+    """A3 — concept-level merge of freshly-created situations.
+
+    Groups the just-created situations by detected theme and, for any theme
+    shared by ≥2 situations, merges them into the earliest situation: re-points
+    member articles, renames the survivor to the concept title, deletes the rest.
+    Deterministic and best-effort; situations without a theme are untouched.
+
+    Returns the list of merge actions performed (for reporting).
+    """
+    by_theme: dict[str, list[dict]] = {}
+    for cl in new_clusters:
+        theme = cl.get("theme")
+        if theme and cl.get("crisis_id"):
+            by_theme.setdefault(theme, []).append(cl)
+
+    merges: list[dict] = []
+    for theme, group in by_theme.items():
+        if len(group) < 2:
+            continue
+        # Survivor = situation with the earliest start (most established).
+        group.sort(key=lambda c: (c.get("earliest") is None, c.get("earliest")))
+        survivor = group[0]
+        losers = group[1:]
+        survivor_crisis = await db.get(Crisis, survivor["crisis_id"])
+        if survivor_crisis is None:
+            continue
+        concept_title = _THEMES[theme][0]
+        survivor_crisis.title = concept_title[:255]
+        loser_ids = [c["crisis_id"] for c in losers]
+        # Re-point all member articles of the losers onto the survivor.
+        await db.execute(
+            update(NewsArticle)
+            .where(NewsArticle.crisis_id.in_(loser_ids))
+            .values(crisis_id=survivor["crisis_id"])
+        )
+        for c in losers:
+            loser = await db.get(Crisis, c["crisis_id"])
+            if loser is not None:
+                await db.delete(loser)
+        merges.append({
+            "theme": theme, "title": concept_title,
+            "survivor": str(survivor["crisis_id"]),
+            "merged": [str(i) for i in loser_ids],
+        })
+    if merges:
+        await db.commit()
+    return merges
 
 
 # ── main ──────────────────────────────────────────────────────
@@ -262,10 +413,12 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
                             processed_at=datetime.now(timezone.utc))
                 )
         elif cl["count"] >= MIN_CLUSTER_SIZE:
+            region = _classify_region(cl.get("texts", []), cl.get("langs", []))
             crisis = Crisis(
                 title=(cl["seed_title"] or "Situasi")[:255],
                 description=cl["seed_summary"],
                 crisis_type="hybrid",
+                region=region,
                 severity_level=5,
                 status="active",
                 auto_grouped=True,
@@ -280,16 +433,30 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
                 .values(crisis_id=crisis.id, processed_at=datetime.now(timezone.utc))
             )
             cl["crisis_id"] = crisis.id
+            cl["region"] = region
+            cl["theme"] = _detect_theme(" ".join(cl.get("texts", [])))
             new_situations.append({"id": str(crisis.id), "title": crisis.title,
-                                   "articles": cl["count"]})
+                                   "articles": cl["count"], "region": region})
         else:
             leftover += cl["count"]
 
     await db.commit()
 
-    # 6. Persist centroids for incremental future runs.
+    # 5b. A3 — concept-level theme merge of the just-created situations.
+    new_clusters = [cl for cl in clusters if not cl["existing"] and cl.get("crisis_id")]
     try:
-        await _upsert_centroids([cl for cl in clusters if cl.get("crisis_id")])
+        merges = await _theme_merge(db, new_clusters)
+    except Exception as exc:  # noqa: BLE001 — non-fatal
+        logger.warning("theme merge failed: %s", exc)
+        merges = []
+    merged_ids = {m_id for m in merges for m_id in m["merged"]}
+
+    # 6. Persist centroids for incremental future runs (skip merged-away ones).
+    try:
+        await _upsert_centroids([
+            cl for cl in clusters
+            if cl.get("crisis_id") and str(cl["crisis_id"]) not in merged_ids
+        ])
     except Exception as exc:  # noqa: BLE001 — non-fatal
         logger.warning("centroid upsert failed: %s", exc)
 
@@ -301,6 +468,7 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
         "leftover_singletons": leftover,
         "threshold": thr,
         "situations": new_situations,
+        "theme_merges": merges,
     }
     logger.info("group_news done: %s", result)
     return result
