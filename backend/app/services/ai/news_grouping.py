@@ -37,6 +37,34 @@ MIN_CLUSTER_SIZE = 2              # ≥2 related articles ⇒ a real situation
 MAX_PER_RUN = 600
 _EMBED_CONCURRENCY = 4
 
+# ── Situation-worthiness filter (Situasi-1) ───────────────────
+# Only articles with global/national geopolitical or economic impact may form a
+# situation. Low-impact categories (olahraga, hiburan, kesehatan) are excluded —
+# they still appear in the raw home feed, they just never seed/join a situation.
+SITUATION_WORTHY_CATEGORIES = frozenset({
+    "politik", "keamanan", "ekonomi", "energi",
+    "internasional", "indonesia", "teknologi",
+})
+
+# ── Title de-duplication (Situasi-2) ──────────────────────────
+# Strip a trailing " - Outlet" / " | Outlet" source suffix (Google News style).
+_SRC_SUFFIX_RE = re.compile(r"\s*[-|–—]\s*[^-|–—]{1,60}$")
+# Drop everything that isn't a letter/digit/space so punctuation never blocks a
+# near-duplicate match.
+_TITLE_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
+_WS_RE = re.compile(r"\s+")
+
+
+def _normalize_title(title: str | None) -> str:
+    """Normalize a headline for duplicate detection: lowercase, drop a trailing
+    ' - Outlet' source suffix, strip punctuation, collapse whitespace."""
+    t = (title or "").strip().lower()
+    if not t:
+        return ""
+    t = _SRC_SUFFIX_RE.sub("", t).strip()  # remove source-name suffix
+    t = _TITLE_PUNCT_RE.sub(" ", t)
+    return _WS_RE.sub(" ", t).strip()
+
 # ── Region classification (Layer A1) ──────────────────────────
 # Region values written to Crisis.region (must match the mobile chips:
 # 'Internasional' | 'Regional' | 'Nasional').
@@ -234,6 +262,8 @@ def _new_cluster(article: NewsArticle, vec: list[float], existing: bool, crisis_
         "member_ids": [] if existing else [article.id],
         "cred_sum": float(article.credibility_score or 0.7) if article else 0.0,
         "earliest": article.published_at if article else None,
+        # Situasi-3 / Home-3 — first non-null member image (representative).
+        "image_url": (article.image_url if article else None),
         # A1/A3 — accumulate signals for region & theme classification.
         "texts": [_text_of(article)] if article else [],
         "langs": [article.language] if article else [],
@@ -248,6 +278,8 @@ def _add(cl: dict, a: NewsArticle, vec: list[float]) -> None:
     cl["cred_sum"] += float(a.credibility_score or 0.7)
     cl.setdefault("texts", []).append(_text_of(a))
     cl.setdefault("langs", []).append(a.language)
+    if not cl.get("image_url") and a.image_url:
+        cl["image_url"] = a.image_url
     if a.published_at and (cl["earliest"] is None or a.published_at < cl["earliest"]):
         cl["earliest"] = a.published_at
 
@@ -374,6 +406,33 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
         return {"processed": 0, "assigned_existing": 0, "new_situations": 0,
                 "leftover_singletons": 0, "situations": []}
 
+    # 2b. Situasi-1 — keep only situation-worthy articles, and
+    #     Situasi-2 — drop exact/near-duplicate titles (same wire story repeated
+    #     across Google News feeds). Excluded/dup articles stay ungrouped (they
+    #     still appear in the raw home feed) — they simply never form a situation.
+    fetched = len(arts)
+    seen_titles: set[str] = set()
+    filtered: list[NewsArticle] = []
+    skipped_category = 0
+    skipped_duplicate = 0
+    for a in arts:
+        if a.category not in SITUATION_WORTHY_CATEGORIES:
+            skipped_category += 1
+            continue
+        norm = _normalize_title(a.title)
+        if norm and norm in seen_titles:
+            skipped_duplicate += 1
+            continue
+        if norm:
+            seen_titles.add(norm)
+        filtered.append(a)
+    arts = filtered
+    if not arts:
+        return {"processed": fetched, "assigned_existing": 0, "new_situations": 0,
+                "leftover_singletons": 0,
+                "skipped_category": skipped_category,
+                "skipped_duplicate": skipped_duplicate, "situations": []}
+
     # 3. Embed — reuse cached embeddings, only embed the ones missing (so
     #    re-clustering at a new threshold costs no embedding quota).
     missing = [a for a in arts if not a.embedding]
@@ -421,6 +480,7 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
             crisis = Crisis(
                 title=(cl["seed_title"] or "Situasi")[:255],
                 description=cl["seed_summary"],
+                image_url=cl.get("image_url"),
                 crisis_type="hybrid",
                 region=region,
                 severity_level=5,
@@ -466,6 +526,9 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
 
     result = {
         "processed": len(arts),
+        "fetched": fetched,
+        "skipped_category": skipped_category,
+        "skipped_duplicate": skipped_duplicate,
         "embedded": embedded,
         "assigned_existing": assigned_existing,
         "new_situations": len(new_situations),

@@ -124,6 +124,9 @@ export interface CrisisDto {
   grayZone: boolean;
   shockMultiplier: number;
   newsCount: number;
+  imageUrl: string;
+  /** Event date (when the situation started), ISO string. */
+  startedAt: string;
   scenarios: ScenarioDto[];
 }
 
@@ -146,6 +149,8 @@ export function parseCrisis(raw: unknown): CrisisDto {
     grayZone: bool(j.gray_zone),
     shockMultiplier: num(j.shock_multiplier, 1.0),
     newsCount: int(j.news_count, 0),
+    imageUrl: str(j.image_url),
+    startedAt: str(j.started_at),
     scenarios: asArray(scenarioSource).map(parseScenario),
   };
 }

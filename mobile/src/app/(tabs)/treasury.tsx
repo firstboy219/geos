@@ -1,11 +1,13 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Animated, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { apiClient } from "@/api/client";
 import { endpoints } from "@/api/endpoints";
+import { Avatar } from "@/components/chronicle/Avatar";
 import { Sym } from "@/components/chronicle/Sym";
+import { useHidingHeader } from "@/components/chronicle/useHidingHeader";
 import { chronicle } from "@/theme/chronicle";
 import {
   ASSET_TYPES,
@@ -23,9 +25,12 @@ const DIR: Record<string, { color: string; cls: string; sym: string }> = {
 };
 
 /** Treasury — user asset tracker with current valuation + gain/loss (F4). */
+const HEADER_H = 56;
+
 export default function TreasuryScreen() {
   const [data, setData] = useState<TreasuryData>(DEMO_TREASURY);
   const [refreshing, setRefreshing] = useState(false);
+  const { onScroll, headerStyle, headerHeight } = useHidingHeader(HEADER_H);
 
   const load = useCallback(async () => {
     try {
@@ -53,21 +58,37 @@ export default function TreasuryScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <View className="flex-row items-center justify-between px-5 py-3 bg-canvas border-b border-surface-variant">
-        <Sym name="menu" size={24} color={chronicle.onBackground} />
-        <Text className="font-ws-bold text-xl text-primary">Treasury</Text>
-        <Pressable onPress={() => router.push("/treasury/edit")} hitSlop={8}>
-          <Sym name="add" size={24} color={chronicle.onBackground} />
-        </Pressable>
-      </View>
+      <Animated.View
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }, headerStyle]}
+      >
+        <View
+          className="flex-row items-center justify-between px-5 bg-canvas border-b border-surface-variant"
+          style={{ height: HEADER_H }}
+        >
+          <Avatar />
+          <Text className="font-ws-bold text-xl text-primary">Treasury</Text>
+          <Pressable onPress={() => router.push("/treasury/edit")} hitSlop={8}>
+            <Sym name="add" size={24} color={chronicle.onBackground} />
+          </Pressable>
+        </View>
+      </Animated.View>
 
-      <ScrollView
+      <Animated.ScrollView
         className="flex-1 bg-canvas"
-        contentContainerClassName="px-5 py-4 pb-28"
+        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerClassName="px-5 pb-28"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={chronicle.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={chronicle.primary}
+            progressViewOffset={HEADER_H}
+          />
         }
       >
+        <View className="h-4" />
         {/* Net worth summary */}
         <View className="bg-primary rounded-2xl p-5 mb-5">
           <Text className="font-inter text-[12px] text-on-primary opacity-80">
@@ -116,7 +137,7 @@ export default function TreasuryScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

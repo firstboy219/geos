@@ -1,11 +1,13 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { apiClient } from "@/api/client";
 import { endpoints } from "@/api/endpoints";
+import { Avatar } from "@/components/chronicle/Avatar";
 import { Sym } from "@/components/chronicle/Sym";
+import { useHidingHeader } from "@/components/chronicle/useHidingHeader";
 import { chronicle } from "@/theme/chronicle";
 import {
   IMPACT_FILTERS,
@@ -23,9 +25,12 @@ const DIR: Record<ImpactDir, { sym: string; color: string; cls: string }> = {
 };
 
 /** Dampak — general consequences of situations, filterable by category (F2). */
+const HEADER_H = 56;
+
 export default function DampakScreen() {
   const [filter, setFilter] = useState(0);
   const [groups, setGroups] = useState<SituationImpacts[]>([]);
+  const { onScroll, headerStyle, headerHeight } = useHidingHeader(HEADER_H);
 
   useEffect(() => {
     let active = true;
@@ -49,16 +54,26 @@ export default function DampakScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <View className="flex-row items-center justify-between px-5 py-3 bg-canvas border-b border-surface-variant">
-        <Sym name="menu" size={24} color={chronicle.onBackground} />
-        <Text className="font-ws-bold text-xl text-primary">Dampak</Text>
-        <Sym name="tune" size={22} color={chronicle.onBackground} />
-      </View>
+      <Animated.View
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }, headerStyle]}
+      >
+        <View
+          className="flex-row items-center justify-between px-5 bg-canvas border-b border-surface-variant"
+          style={{ height: HEADER_H }}
+        >
+          <Avatar />
+          <Text className="font-ws-bold text-xl text-primary">Dampak</Text>
+          <Sym name="tune" size={22} color={chronicle.onBackground} />
+        </View>
+      </Animated.View>
 
-      <ScrollView
+      <Animated.ScrollView
         className="flex-1 bg-canvas"
+        contentContainerStyle={{ paddingTop: headerHeight }}
         contentContainerClassName="pb-28"
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         {/* Personal impact CTA */}
         <View className="px-5 pt-4">
@@ -183,7 +198,7 @@ export default function DampakScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

@@ -35,7 +35,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="analisa"
-        options={{ title: 'Analisa', tabBarIcon: tabIcon('schedule') }}
+        options={{ title: 'Situasi', tabBarIcon: tabIcon('schedule') }}
       />
       <Tabs.Screen
         name="dampak"

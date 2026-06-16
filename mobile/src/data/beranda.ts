@@ -20,8 +20,10 @@ export interface BeritaArticle {
   time: string;
   /** Source article URL (opens in browser on tap). */
   url?: string;
-  /** Remote image (from RSS via backend); falls back to picsum by id. */
+  /** Remote image (from RSS via backend); undefined → neutral placeholder. */
   image?: string;
+  /** Category label(s) from backend, lowercased, for client-side filtering. */
+  categories?: string[];
   /** Pill badge (featured) — e.g. "Terkini". */
   badge?: { label: string; tone: DotTone };
   /** Status dot chip (briefs) — e.g. "Risiko Meningkat". */
@@ -45,6 +47,28 @@ export interface NewsApiItem {
   summary_quotes: { text: string; cite: string | null }[] | null;
   published_at: string | null;
   ingested_at: string;
+  /** Category may arrive as a single string or an array (backend-dependent). */
+  category?: string | string[] | null;
+  categories?: string[] | null;
+}
+
+/** Normalises whatever category shape the backend sends into lowercase tags. */
+export function categoriesOf(it: NewsApiItem): string[] {
+  const raw: (string | null | undefined)[] = [];
+  if (Array.isArray(it.categories)) raw.push(...it.categories);
+  if (Array.isArray(it.category)) raw.push(...it.category);
+  else if (typeof it.category === "string") raw.push(it.category);
+  return raw
+    .filter((c): c is string => !!c)
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/** Client-side category match. "Semua" (no param) matches everything. */
+export function matchesCategory(article: BeritaArticle, label: NewsCategory): boolean {
+  const want = categoryParam(label);
+  if (!want) return true;
+  return (article.categories ?? []).includes(want);
 }
 
 export function timeAgo(iso: string | null): string {
@@ -66,6 +90,7 @@ export function toArticle(it: NewsApiItem): BeritaArticle {
   const quotes = (it.summary_quotes ?? [])
     .filter((q) => q && q.text)
     .map((q) => ({ text: q.text, cite: q.cite ?? "" }));
+  const cats = categoriesOf(it);
   return {
     id: it.id,
     source: it.source_name ?? "Sumber",
@@ -74,26 +99,29 @@ export function toArticle(it: NewsApiItem): BeritaArticle {
     time: timeAgo(it.published_at ?? it.ingested_at),
     url: it.url ?? undefined,
     image: it.image_url ?? undefined,
+    categories: cats.length ? cats : undefined,
     intisari: points.length ? points : undefined,
     quotes: quotes.length ? quotes : undefined,
   };
 }
 
 export function toLatest(it: NewsApiItem): LatestItem {
-  const points = (it.summary_points ?? []).filter(Boolean);
-  const quotes = (it.summary_quotes ?? [])
-    .filter((q) => q && q.text)
-    .map((q) => ({ text: q.text, cite: q.cite ?? "" }));
+  return toLatestFromArticle(toArticle(it));
+}
+
+/** Derive a compact LatestItem from a full article (single master list). */
+export function toLatestFromArticle(a: BeritaArticle): LatestItem {
   return {
-    id: it.id,
-    source: it.source_name ?? "Sumber",
-    title: it.title,
-    time: timeAgo(it.published_at ?? it.ingested_at),
-    url: it.url ?? undefined,
-    image: it.image_url ?? undefined,
+    id: a.id,
+    source: a.source,
+    title: a.title,
+    time: a.time,
+    url: a.url,
+    image: a.image,
+    categories: a.categories,
     tone: "emerald",
-    intisari: points.length ? points : undefined,
-    quotes: quotes.length ? quotes : undefined,
+    intisari: a.intisari,
+    quotes: a.quotes,
   };
 }
 
@@ -206,6 +234,7 @@ export interface LatestItem {
   time: string;
   url?: string;
   image?: string;
+  categories?: string[];
   tone: DotTone;
   intisari?: string[];
   quotes?: Quote[];

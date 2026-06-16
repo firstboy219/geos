@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Image, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { apiClient } from "@/api/client";
 import { endpoints } from "@/api/endpoints";
+import { Avatar } from "@/components/chronicle/Avatar";
 import { Sym } from "@/components/chronicle/Sym";
+import { useHidingHeader } from "@/components/chronicle/useHidingHeader";
 import { useCrises } from "@/state";
 import { chronicle } from "@/theme/chronicle";
 import {
@@ -42,11 +44,32 @@ const TONE_HEX: Record<ToneKey, string> = {
 
 const CATS = ["Internasional", "Regional", "Nasional"];
 const SUMBER = [32, 24, 18];
-const HARI = [32, 21, 45];
-const KEBERLANJUTAN = ["3 bulan", "6 bulan", "2 tahun"];
+const HEADER_H = 56;
 
+/** Decorative seeded image for the non-situation-specific global overview. */
 function imageFor(id: string): string {
   return `https://picsum.photos/seed/geoscan-map-${id}/800/360`;
+}
+
+const MONTHS_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+/** Format an ISO date string as e.g. "13 Juni 2026"; empty on failure. */
+function formatDateId(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTHS_ID[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** Whole days elapsed between an ISO event date and now; null on failure. */
+function daysSince(iso: string): number | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  if (diff < 0) return 0;
+  return Math.floor(diff / 86_400_000);
 }
 
 interface SituationCardData {
@@ -59,6 +82,7 @@ interface SituationCardData {
 export default function AnalisaScreen() {
   const [cat, setCat] = useState(0);
   const crises = useCrises();
+  const { onScroll, headerStyle, headerHeight } = useHidingHeader(HEADER_H);
 
   useEffect(() => {
     void crises.fetch();
@@ -85,17 +109,28 @@ export default function AnalisaScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <View className="flex-row items-center justify-between px-5 py-3 bg-canvas border-b border-surface-variant">
-        <Sym name="menu" size={24} color={chronicle.onBackground} />
-        <Text className="font-ws-bold text-xl text-primary">Analisis</Text>
-        <Sym name="share" size={22} color={chronicle.onBackground} />
-      </View>
-
-      <ScrollView
-        className="flex-1 bg-canvas"
-        contentContainerClassName="px-5 pt-4 pb-28"
-        showsVerticalScrollIndicator={false}
+      <Animated.View
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }, headerStyle]}
       >
+        <View
+          className="flex-row items-center justify-between px-5 bg-canvas border-b border-surface-variant"
+          style={{ height: HEADER_H }}
+        >
+          <Avatar />
+          <Text className="font-ws-bold text-xl text-primary">Situasi</Text>
+          <Sym name="share" size={22} color={chronicle.onBackground} />
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
+        className="flex-1 bg-canvas"
+        contentContainerStyle={{ paddingTop: headerHeight }}
+        contentContainerClassName="px-5 pb-28"
+        showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
+        <View className="h-4" />
         {/* Global situation overview */}
         <View className="bg-surface-container-lowest rounded-lg border border-surface-variant overflow-hidden mb-7">
           <View className="px-4 py-3 border-b border-surface-variant">
@@ -160,7 +195,7 @@ export default function AnalisaScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -244,7 +279,6 @@ function SituationCard({
 }) {
   const [open, setOpen] = useState(index === 0);
   const [news, setNews] = useState<RelatedNews[]>([]);
-  const hoax = Math.max(0, 100 - crisis.credibilityScore);
   const bars = open ? crisis.probabilityBars : crisis.probabilityBars.slice(0, 1);
   const sumber = newsCount ?? SUMBER[index] ?? 20;
 
@@ -266,16 +300,22 @@ function SituationCard({
 
   return (
     <View className="pb-7 border-b border-surface-variant">
-      {/* Map */}
+      {/* Situation image from the news source, or a neutral on-brand placeholder. */}
       <View className="mb-4 rounded-lg border border-surface-variant overflow-hidden">
-        <Image
-          source={{ uri: imageFor(crisis.id) }}
-          className="w-full h-40 bg-surface-container-high"
-        />
+        {crisis.image ? (
+          <Image
+            source={{ uri: crisis.image }}
+            className="w-full h-40 bg-surface-container-high"
+          />
+        ) : (
+          <View className="w-full h-40 bg-surface-container-high items-center justify-center">
+            <Sym name="public" size={40} color={chronicle.onSurfaceVariant} />
+          </View>
+        )}
         <View className="bg-surface-container-low px-4 py-2 border-t border-surface-variant flex-row items-center gap-1">
-          <Sym name="map" size={16} color={chronicle.onSurfaceVariant} />
+          <Sym name="image" size={16} color={chronicle.onSurfaceVariant} />
           <Text className="font-inter text-[12px] text-on-surface-variant">
-            Visualisasi Zona Insiden
+            {crisis.image ? "Gambar dari sumber berita" : "Visualisasi Zona Insiden"}
           </Text>
         </View>
       </View>
@@ -287,7 +327,7 @@ function SituationCard({
             {crisis.title}
           </Text>
           <Text className="font-inter text-[12px] text-success-emerald uppercase tracking-wider">
-            Potensi Hoax {hoax}%
+            Skor Kredibilitas {crisis.credibilityScore}%
           </Text>
         </View>
         <View className="items-end">
@@ -545,12 +585,7 @@ function SituationCard({
 
       {/* Footer */}
       <View className="flex-row justify-between items-center border-t border-surface-variant pt-3 mt-1">
-        <Text className="font-inter text-[12px] text-on-surface-variant leading-relaxed">
-          Sudah Berlangsung {HARI[index] ?? 30} Hari{"\n"}
-          <Text className="font-inter-medium text-on-background">
-            Potensi Keberlanjutan {KEBERLANJUTAN[index] ?? "3 bulan"}
-          </Text>
-        </Text>
+        <FooterMeta crisis={crisis} news={news} />
         <Pressable
           onPress={() => setOpen((v) => !v)}
           className="flex-row items-center gap-1"
@@ -567,4 +602,53 @@ function SituationCard({
       </View>
     </View>
   );
+}
+
+/**
+ * Footer meta (Situasi-5):
+ *  - "Sudah Berlangsung X Hari" computed from the situation's EVENT date
+ *    (`crisis.startedAt`).
+ *  - "Potensi Keberlanjutan ..." comes from framework analysis which is not yet
+ *    available, so it is omitted when absent.
+ *  - When no event date / keberlanjutan exists, fall back to showing the most
+ *    recent related article's published date instead.
+ */
+function FooterMeta({
+  crisis,
+  news,
+}: {
+  crisis: CrisisModel;
+  news: RelatedNews[];
+}) {
+  const days = crisis.startedAt ? daysSince(crisis.startedAt) : null;
+
+  if (days != null) {
+    return (
+      <Text className="font-inter text-[12px] text-on-surface-variant leading-relaxed">
+        Sudah Berlangsung{" "}
+        <Text className="font-inter-medium text-on-background">{days} Hari</Text>
+      </Text>
+    );
+  }
+
+  // Fallback: most recent related article date.
+  const latest = news
+    .map((n) => n.published_at)
+    .filter((p): p is string => !!p)
+    .map((p) => ({ p, t: new Date(p).getTime() }))
+    .filter(({ t }) => !Number.isNaN(t))
+    .sort((a, b) => b.t - a.t)[0];
+  const latestLabel = latest ? formatDateId(latest.p) : "";
+
+  if (latestLabel) {
+    return (
+      <Text className="font-inter text-[12px] text-on-surface-variant leading-relaxed">
+        Berita terbaru{" "}
+        <Text className="font-inter-medium text-on-background">{latestLabel}</Text>
+      </Text>
+    );
+  }
+
+  // Nothing available yet.
+  return <View />;
 }

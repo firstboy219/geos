@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Image,
   Linking,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
+  TextInput,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -15,19 +16,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { apiClient } from "@/api/client";
 import { endpoints } from "@/api/endpoints";
 import { Sym } from "@/components/chronicle/Sym";
+import { Avatar } from "@/components/chronicle/Avatar";
+import { useHidingHeader } from "@/components/chronicle/useHidingHeader";
+import { ArticleImage } from "@/components/beranda/ArticleImage";
+import { PulseDot } from "@/components/beranda/PulseDot";
 import { chronicle } from "@/theme/chronicle";
 import {
   BRIEFS,
   FEATURED,
   LATEST,
   NEWS_CATEGORIES,
-  categoryParam,
   faviconFor,
-  imageFor,
   isOpenableUrl,
+  matchesCategory,
   timeAgo,
   toArticle,
-  toLatest,
+  toLatestFromArticle,
   type BeritaArticle,
   type DotTone,
   type LatestItem,
@@ -35,7 +39,9 @@ import {
   type NewsCategory,
 } from "@/data/beranda";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 100; // Home-7: fetch a large master page up front.
+const MAX_PAGES = 5; // cap how far infinite scroll grows the master list.
+const HEADER_H = 150; // top bar + last-updated row + category bar (auto-hides).
 
 const DOT_BG: Record<DotTone, string> = {
   emerald: "bg-success-emerald",
@@ -43,15 +49,33 @@ const DOT_BG: Record<DotTone, string> = {
   rose: "bg-error-rose",
 };
 
+/** Offline/empty demo master list (kept so the screen is never blank). */
+const DEMO_MASTER: BeritaArticle[] = [FEATURED, ...BRIEFS, ...LATEST.map(latestToArticle)];
+
+function latestToArticle(l: LatestItem): BeritaArticle {
+  return {
+    id: l.id,
+    source: l.source,
+    title: l.title,
+    body: l.intisari?.[0] ?? "",
+    time: l.time,
+    url: l.url,
+    image: l.image,
+    categories: l.categories,
+    intisari: l.intisari,
+    quotes: l.quotes,
+  };
+}
+
 function openSource(url?: string) {
   if (isOpenableUrl(url)) void Linking.openURL(url);
 }
 
 /** Beranda — news & trends feed (mockup_v2/home_page, "Chronicle Intel"). */
 export default function BerandaScreen() {
-  const [featured, setFeatured] = useState<BeritaArticle>(FEATURED);
-  const [briefs, setBriefs] = useState<BeritaArticle[]>(BRIEFS);
-  const [latest, setLatest] = useState<LatestItem[]>(LATEST);
+  // Home-7: one master list of every loaded article; everything derives from it.
+  const [master, setMaster] = useState<BeritaArticle[]>(DEMO_MASTER);
+  const [usingDemo, setUsingDemo] = useState(true);
   const [cat, setCat] = useState(0); // index into NEWS_CATEGORIES
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -59,62 +83,60 @@ export default function BerandaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchNews = useCallback(async (pageNum: number, label: NewsCategory) => {
-    const category = categoryParam(label);
+  // General-3: client-side search over loaded articles.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const { onScroll: headerOnScroll, headerStyle, headerHeight } = useHidingHeader(HEADER_H);
+
+  const fetchNews = useCallback(async (pageNum: number) => {
     const res = await apiClient.get(endpoints.news, {
-      params: { size: PAGE_SIZE, page: pageNum, ...(category ? { category } : {}) },
+      params: { size: PAGE_SIZE, page: pageNum },
     });
     const data: NewsApiItem[] = res.data?.data ?? res.data ?? [];
     const tot: number = res.data?.total ?? data.length;
     return { data, tot };
   }, []);
 
-  // (Re)load page 1 for the active category → resets featured/briefs/latest.
-  const loadFirst = useCallback(
-    async (label: NewsCategory) => {
-      try {
-        const { data, tot } = await fetchNews(1, label);
-        if (data.length > 0) {
-          setFeatured({ ...toArticle(data[0]), badge: { label: "Terkini", tone: "rose" } });
-          setBriefs(data.slice(1, 3).map(toArticle));
-          setLatest(data.slice(3).map(toLatest));
-        } else {
-          setBriefs([]);
-          setLatest([]);
-        }
+  // Re-fetch the master list from page 1 (mount, Perbarui, pull-to-refresh).
+  const loadFirst = useCallback(async () => {
+    try {
+      const { data, tot } = await fetchNews(1);
+      if (data.length > 0) {
+        setMaster(data.map(toArticle));
+        setUsingDemo(false);
         setTotal(tot);
         setPage(1);
-        setLastUpdated(new Date().toISOString());
-      } catch {
-        // offline / unauthenticated → keep existing content
       }
-    },
-    [fetchNews],
-  );
+      setLastUpdated(new Date().toISOString());
+    } catch {
+      // offline / unauthenticated → keep existing (demo) content
+    }
+  }, [fetchNews]);
 
   useEffect(() => {
-    void loadFirst(NEWS_CATEGORIES[cat]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cat]);
+    void loadFirst();
+  }, [loadFirst]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadFirst(NEWS_CATEGORIES[cat]);
+    await loadFirst();
     setRefreshing(false);
-  }, [loadFirst, cat]);
+  }, [loadFirst]);
 
-  // Infinite scroll — append next page into "Intelijen Terbaru".
+  // Infinite scroll — append the next backend page into the master list.
   const loadMore = useCallback(async () => {
-    if (loadingMore) return;
+    if (loadingMore || usingDemo) return;
+    if (page >= MAX_PAGES) return;
     if (page * PAGE_SIZE >= total) return; // no more
     setLoadingMore(true);
     try {
       const next = page + 1;
-      const { data } = await fetchNews(next, NEWS_CATEGORIES[cat]);
+      const { data } = await fetchNews(next);
       if (data.length > 0) {
-        setLatest((prev) => {
+        setMaster((prev) => {
           const seen = new Set(prev.map((p) => p.id));
-          return [...prev, ...data.map(toLatest).filter((x) => !seen.has(x.id))];
+          return [...prev, ...data.map(toArticle).filter((x) => !seen.has(x.id))];
         });
         setPage(next);
       }
@@ -123,9 +145,11 @@ export default function BerandaScreen() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, page, total, fetchNews, cat]);
+  }, [loadingMore, usingDemo, page, total, fetchNews]);
 
-  const onScroll = useCallback(
+  // Infinite-scroll detection runs on plain JS scroll callbacks so it doesn't
+  // interfere with the native-driven hiding-header onScroll event.
+  const onScrollCheck = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
       if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 500) {
@@ -135,69 +159,136 @@ export default function BerandaScreen() {
     [loadMore],
   );
 
-  const hasMore = page * PAGE_SIZE < total;
+  // ── Derived (client-side) feed: filter by category, then by search query ──
+  const label = NEWS_CATEGORIES[cat];
+  const q = query.trim().toLowerCase();
+
+  const filtered = useMemo(() => {
+    let list = master.filter((a) => matchesCategory(a, label));
+    if (q) list = list.filter((a) => a.title.toLowerCase().includes(q));
+    return list;
+  }, [master, label, q]);
+
+  const featured: BeritaArticle | null = filtered[0]
+    ? { ...filtered[0], badge: { label: "Terkini", tone: "rose" } }
+    : null;
+  const briefs = filtered.slice(1, 3);
+  const latest: LatestItem[] = filtered.slice(3).map(toLatestFromArticle);
+
+  const hasMore = !usingDemo && !q && page < MAX_PAGES && page * PAGE_SIZE < total;
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setQuery("");
+  }, []);
 
   return (
     <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      {/* Top app bar */}
-      <View className="flex-row items-center justify-between px-5 py-3 bg-canvas border-b border-surface-variant">
-        <Sym name="menu" size={24} color={chronicle.onBackground} />
-        <Text className="font-ws-bold text-xl text-primary">Beranda</Text>
-        <Sym name="search" size={24} color={chronicle.onBackground} />
-      </View>
+      {/* General-4: auto-hiding header (top bar + last-updated + categories). */}
+      <Animated.View
+        style={[{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20 }, headerStyle]}
+        pointerEvents="box-none"
+      >
+        <View className="bg-canvas">
+          {/* Top app bar */}
+          <View className="flex-row items-center justify-between px-5 py-3 bg-canvas border-b border-surface-variant">
+            {/* General-2: profile avatar replaces the menu icon. */}
+            <Avatar />
+            {searchOpen ? (
+              <View className="flex-1 mx-3 flex-row items-center bg-surface-container rounded-full px-3">
+                <Sym name="search" size={18} color={chronicle.onSurfaceVariant} />
+                <TextInput
+                  autoFocus
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Cari berita…"
+                  placeholderTextColor={chronicle.onSurfaceVariant}
+                  className="flex-1 px-2 py-2 font-inter text-[14px] text-on-surface"
+                  returnKeyType="search"
+                />
+                {query.length > 0 ? (
+                  <Pressable onPress={() => setQuery("")} hitSlop={8}>
+                    <Sym name="close" size={18} color={chronicle.onSurfaceVariant} />
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : (
+              <Text className="font-ws-bold text-xl text-primary">Beranda</Text>
+            )}
+            {/* General-3: search toggle. */}
+            <Pressable onPress={() => (searchOpen ? closeSearch() : setSearchOpen(true))} hitSlop={8}>
+              <Sym name={searchOpen ? "close" : "search"} size={24} color={chronicle.onBackground} />
+            </Pressable>
+          </View>
 
-      {/* Last updated + manual refresh */}
-      <View className="flex-row items-center justify-between px-5 py-2 bg-surface-container-low border-b border-surface-variant">
-        <Text className="font-inter text-[12px] text-on-surface-variant">
-          {lastUpdated ? `Terakhir diperbarui ${timeAgo(lastUpdated)}` : "Memuat berita…"}
-        </Text>
-        <Pressable onPress={onRefresh} disabled={refreshing} className="flex-row items-center gap-1" hitSlop={8}>
-          <Sym name="refresh" size={16} color={chronicle.primary} />
-          <Text className="font-inter-medium text-[12px] text-primary">
-            {refreshing ? "Memperbarui…" : "Perbarui"}
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Category filter bar (portal-style, clickable) */}
-      <View className="bg-canvas border-b border-surface-variant">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerClassName="px-4 gap-2 py-2.5"
-        >
-          {NEWS_CATEGORIES.map((label, i) => (
-            <Pressable
-              key={label}
-              onPress={() => setCat(i)}
-              className={`px-4 py-1.5 rounded-full ${
-                i === cat ? "bg-primary" : "bg-surface-container"
-              }`}
-            >
-              <Text
-                className={`font-inter-medium text-[13px] ${
-                  i === cat ? "text-on-primary" : "text-on-surface-variant"
-                }`}
-              >
-                {label}
+          {/* Last updated + manual refresh */}
+          <View className="flex-row items-center justify-between px-5 py-2 bg-surface-container-low border-b border-surface-variant">
+            <Text className="font-inter text-[12px] text-on-surface-variant">
+              {lastUpdated ? `Terakhir diperbarui ${timeAgo(lastUpdated)}` : "Memuat berita…"}
+            </Text>
+            <Pressable onPress={onRefresh} disabled={refreshing} className="flex-row items-center gap-1" hitSlop={8}>
+              <Sym name="refresh" size={16} color={chronicle.primary} />
+              <Text className="font-inter-medium text-[12px] text-primary">
+                {refreshing ? "Memperbarui…" : "Perbarui"}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+          </View>
 
-      <ScrollView
+          {/* Category filter bar (instant, client-side). */}
+          <View className="bg-canvas border-b border-surface-variant">
+            <Animated.ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="px-4 gap-2 py-2.5"
+            >
+              {NEWS_CATEGORIES.map((lbl, i) => (
+                <Pressable
+                  key={lbl}
+                  onPress={() => setCat(i)}
+                  className={`px-4 py-1.5 rounded-full ${i === cat ? "bg-primary" : "bg-surface-container"}`}
+                >
+                  <Text
+                    className={`font-inter-medium text-[13px] ${
+                      i === cat ? "text-on-primary" : "text-on-surface-variant"
+                    }`}
+                  >
+                    {lbl}
+                  </Text>
+                </Pressable>
+              ))}
+            </Animated.ScrollView>
+          </View>
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
         className="flex-1 bg-surface-container-low"
-        contentContainerClassName="pb-28"
+        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: 112 }}
         showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={400}
+        onScroll={headerOnScroll}
+        onScrollEndDrag={onScrollCheck}
+        onMomentumScrollEnd={onScrollCheck}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={chronicle.primary} colors={[chronicle.primary]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            progressViewOffset={headerHeight}
+            tintColor={chronicle.primary}
+            colors={[chronicle.primary]}
+          />
         }
       >
-        {/* Featured breaking news */}
-        <FeaturedCard article={featured} />
+        {featured ? (
+          <FeaturedCard article={featured} />
+        ) : (
+          <View className="px-5 py-16 items-center">
+            <Sym name="search_off" size={40} color={chronicle.onSurfaceVariant} />
+            <Text className="font-inter text-[14px] text-on-surface-variant text-center mt-3">
+              {q ? `Tidak ada berita untuk "${query.trim()}"` : "Belum ada berita untuk kategori ini."}
+            </Text>
+          </View>
+        )}
 
         {/* Ringkasan Tren — briefs */}
         {briefs.length > 0 ? (
@@ -212,24 +303,26 @@ export default function BerandaScreen() {
         ) : null}
 
         {/* Intelijen Terbaru — paginated list */}
-        <View className="mt-7 px-5">
-          <Text className="font-ws-semi text-lg text-on-surface mb-3">Intelijen Terbaru</Text>
-          <View className="gap-3">
-            {latest.map((l) => (
-              <LatestRow key={l.id} item={l} />
-            ))}
+        {latest.length > 0 ? (
+          <View className="mt-7 px-5">
+            <Text className="font-ws-semi text-lg text-on-surface mb-3">Intelijen Terbaru</Text>
+            <View className="gap-3">
+              {latest.map((l) => (
+                <LatestRow key={l.id} item={l} />
+              ))}
+            </View>
+            {hasMore ? (
+              <Text className="font-inter text-[12px] text-on-surface-variant text-center mt-5">
+                {loadingMore ? "Memuat berita lainnya…" : "Gulir untuk memuat lebih banyak"}
+              </Text>
+            ) : (
+              <Text className="font-inter text-[12px] text-on-surface-variant opacity-60 text-center mt-5">
+                — Sudah paling bawah —
+              </Text>
+            )}
           </View>
-          {hasMore ? (
-            <Text className="font-inter text-[12px] text-on-surface-variant text-center mt-5">
-              {loadingMore ? "Memuat berita lainnya…" : "Gulir untuk memuat lebih banyak"}
-            </Text>
-          ) : latest.length > 0 ? (
-            <Text className="font-inter text-[12px] text-on-surface-variant opacity-60 text-center mt-5">
-              — Sudah paling bawah —
-            </Text>
-          ) : null}
-        </View>
-      </ScrollView>
+        ) : null}
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -253,7 +346,8 @@ function SourceChip({ source, url }: { source: string; url?: string }) {
 function Intisari({ items }: { items: string[] }) {
   return (
     <View>
-      <Text className="font-inter text-[11px] tracking-wider text-on-surface-variant mb-2">INTISARI</Text>
+      {/* Home-4: "INTISARI" → "Singkatnya..". */}
+      <Text className="font-inter text-[11px] tracking-wider text-on-surface-variant mb-2">Singkatnya..</Text>
       <View className="gap-2">
         {items.map((t, i) => (
           <View key={i} className="flex-row gap-3">
@@ -285,10 +379,17 @@ function FeaturedCard({ article }: { article: BeritaArticle }) {
     <View className="bg-surface-container-lowest">
       <Pressable onPress={() => openSource(article.url)}>
         <View className="relative">
-          <Image source={{ uri: article.image ?? imageFor(article.id) }} className="w-full h-60 bg-surface-container-high" />
+          {/* Home-3: real image or neutral placeholder (no random picsum). */}
+          <ArticleImage uri={article.image} className="w-full h-60" iconSize={40} />
           {article.badge ? (
-            <View className={`absolute top-4 left-4 px-3 py-1 rounded-full ${DOT_BG[article.badge.tone]}`}>
-              <Text className="font-inter-semi text-[11px] text-white uppercase tracking-wider">{article.badge.label}</Text>
+            <View
+              className={`absolute top-4 left-4 flex-row items-center gap-1.5 px-3 py-1 rounded-full ${DOT_BG[article.badge.tone]}`}
+            >
+              {/* Home-6: pulsing "beep" dot next to "Terkini". */}
+              <PulseDot color="#ffffff" />
+              <Text className="font-inter-semi text-[11px] text-white uppercase tracking-wider">
+                {article.badge.label}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -333,22 +434,26 @@ function BriefCard({ article }: { article: BeritaArticle }) {
   return (
     <View className="bg-surface-container-lowest rounded-xl overflow-hidden">
       <Pressable onPress={() => openSource(article.url)}>
-        <Image source={{ uri: article.image ?? imageFor(article.id) }} className="w-full h-44 bg-surface-container-high" />
+        <ArticleImage uri={article.image} className="w-full h-44" iconSize={32} />
       </Pressable>
       <View className="p-5">
-        <View className="flex-row justify-between items-start mb-3">
-          {article.status ? (
+        {/* Home-5: source (favicon + name) LEFT ↔ time RIGHT, same top row. */}
+        <View className="flex-row justify-between items-center mb-3">
+          <SourceChip source={article.source} url={article.url} />
+          <Text className="font-inter text-[12px] text-on-surface-variant opacity-70">{article.time}</Text>
+        </View>
+
+        {/* Keep status chip if present (below the source/time row). */}
+        {article.status ? (
+          <View className="flex-row mb-3">
             <View className="flex-row items-center gap-2 bg-surface-container-high px-2.5 py-1 rounded-full">
               <View className={`w-2 h-2 rounded-full ${DOT_BG[article.status.tone]}`} />
               <Text className="font-inter-medium text-[11px] text-on-surface-variant uppercase tracking-wider">
                 {article.status.label}
               </Text>
             </View>
-          ) : (
-            <View />
-          )}
-          <SourceChip source={article.source} url={article.url} />
-        </View>
+          </View>
+        ) : null}
 
         <Pressable onPress={() => openSource(article.url)}>
           <Text className="font-ws-semi text-lg text-on-surface mb-2 leading-snug">{article.title}</Text>
@@ -363,15 +468,20 @@ function BriefCard({ article }: { article: BeritaArticle }) {
         ) : null}
 
         <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-outline-variant">
-          <View className="flex-row items-center gap-2">
-            {hasDetail ? (
-              <Pressable onPress={() => setOpen((v) => !v)} className="flex-row items-center gap-1 px-3 py-1.5 rounded-full" hitSlop={6}>
-                <Sym name={open ? "expand_less" : "expand_more"} size={18} color={chronicle.onSurfaceVariant} />
-                <Text className="font-inter-medium text-[13px] text-on-surface-variant">{open ? "Tutup" : "Muat Detail"}</Text>
-              </Pressable>
-            ) : null}
-            <Text className="font-inter text-[12px] text-on-surface-variant opacity-70">{article.time}</Text>
-          </View>
+          {hasDetail ? (
+            <Pressable
+              onPress={() => setOpen((v) => !v)}
+              className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
+              hitSlop={6}
+            >
+              <Sym name={open ? "expand_less" : "expand_more"} size={18} color={chronicle.onSurfaceVariant} />
+              <Text className="font-inter-medium text-[13px] text-on-surface-variant">
+                {open ? "Tutup" : "Muat Detail"}
+              </Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
           {isOpenableUrl(article.url) ? (
             <Pressable onPress={() => openSource(article.url)} hitSlop={8}>
               <Sym name="open_in_new" size={18} color={chronicle.primary} />
@@ -392,7 +502,7 @@ function LatestRow({ item }: { item: LatestItem }) {
     <View className="bg-surface-container-lowest rounded-xl p-3">
       <View className="flex-row gap-3">
         <Pressable onPress={() => openSource(item.url)}>
-          <Image source={{ uri: item.image ?? imageFor(item.id) }} className="w-20 h-20 rounded-lg bg-surface-container-high" />
+          <ArticleImage uri={item.image} className="w-20 h-20 rounded-lg" iconSize={22} />
         </Pressable>
         <View className="flex-1">
           <View className="flex-row items-center gap-1.5 mb-1">

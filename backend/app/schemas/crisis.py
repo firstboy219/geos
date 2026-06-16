@@ -46,6 +46,7 @@ class CrisisListItem(BaseModel):
 
     id: uuid.UUID
     title: str
+    image_url: str | None = None  # Layer 2 / Home-3 — representative source image
     region: str | None = None
     sub_region: str | None = None
     crisis_type: str | None = None

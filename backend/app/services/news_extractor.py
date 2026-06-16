@@ -51,17 +51,42 @@ def clean_html(text: str | None) -> str:
 
 
 def _sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [p.strip() for p in parts if len(p.strip()) >= 25]
+    # Split on sentence terminators (also handles "…"). Keep only sentences with
+    # enough substance to be a genuine summary line (≥25 chars and ≥4 words).
+    parts = re.split(r"(?<=[.!?…])\s+", text.strip())
+    out = []
+    for p in parts:
+        p = p.strip()
+        if len(p) >= 25 and len(p.split()) >= 4:
+            out.append(p)
+    return out
+
+
+# Min body length to treat content as real article text (vs. a title-length
+# feed snippet). Below this we fall back to the title.
+_MIN_CONTENT_LEN = 80
 
 
 def extract_points(text: str | None, *, max_points: int = 3, fallback: str = "") -> list[str]:
+    """Build the intisari (summary points) from the article BODY.
+
+    Reads the cleaned `content_summary` (RSS description / content:encoded) and
+    returns the most representative sentences. Only falls back to the title when
+    the body is empty or shorter than a real article snippet — some feeds ship
+    title-length descriptions, which is a feed limitation, not echoing by choice.
+    """
+    fb = fallback.strip()
     text = clean_html(text)
-    if not text:
-        return [fallback.strip()][:1] if fallback.strip() else []
+    # Body too thin to summarize from → fall back to the title.
+    if len(text) < _MIN_CONTENT_LEN:
+        if text and len(text) >= 25:
+            return [text[:300]]
+        return [fb][:1] if fb else ([text[:280]] if text else [])
     sents = _sentences(text)
     if len(sents) <= 1:
-        return sents[:1] if sents else [text[:280]]
+        if sents:
+            return sents[:1]
+        return [fb][:1] if fb else [text[:280]]
 
     freq: dict[str, int] = {}
     for w in _WORD.findall(text.lower()):
@@ -88,13 +113,43 @@ def extract_points(text: str | None, *, max_points: int = 3, fallback: str = "")
     return [t[2][:300] for t in top]
 
 
-def extract_quotes(text: str | None, *, max_quotes: int = 3) -> list[dict]:
+# Common English function words used to spot quotes that are still English in an
+# Indonesian article (Home-1b). Mirrors translator._looks_english conservatively.
+_EN_STOPWORDS = {
+    "the", "and", "of", "to", "in", "is", "for", "on", "with", "as",
+    "at", "by", "from", "that", "this", "was", "are", "be", "has", "have",
+    "we", "they", "will", "would", "not", "but",
+}
+_ID_MARKERS = {
+    "yang", "dan", "di", "ke", "dari", "untuk", "dengan", "ini", "itu",
+    "akan", "tidak", "adalah", "pada", "dalam", "para", "tahun", "juga",
+    "sebagai", "telah", "atau", "karena", "oleh", "menjadi", "kami", "kita",
+}
+
+
+def _quote_looks_english(q: str) -> bool:
+    """Conservative English check for a quote span: several EN stopwords and no
+    strong Indonesian markers."""
+    tokens = [t.lower() for t in _WORD.findall(q)]
+    if not tokens:
+        return False
+    if any(t in _ID_MARKERS for t in tokens):
+        return False
+    return sum(1 for t in tokens if t in _EN_STOPWORDS) >= 2
+
+
+def extract_quotes(
+    text: str | None, *, max_quotes: int = 3, drop_english: bool = False
+) -> list[dict]:
     text = clean_html(text)
     out: list[dict] = []
     seen: set[str] = set()
     for m in re.finditer(r'["“«]([^"”»]{25,400})["”»]', text):
         q = m.group(1).strip()
         if " " not in q or q.lower() in seen:
+            continue
+        if drop_english and _quote_looks_english(q):
+            seen.add(q.lower())
             continue
         tail = text[m.end():m.end() + 100]
         head = text[max(0, m.start() - 100):m.start()]

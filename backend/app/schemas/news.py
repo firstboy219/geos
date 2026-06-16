@@ -19,6 +19,7 @@ class NewsFeedItem(BaseModel):
     title: str
     source_name: str | None = None
     url: str
+    category: str | None = None  # for client-side category filtering on Beranda
     image_url: str | None = None
     summary_points: list[str] | None = None
     summary_quotes: list[QuoteOut] | None = None

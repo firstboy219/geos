@@ -161,6 +161,10 @@ export interface CrisisModel {
   cascadeNote: string;
   /** A1 — region bucket for filtering: 'Internasional'|'Regional'|'Nasional'. */
   region?: string;
+  /** Situation image (from the news source); empty/absent → UI shows a neutral placeholder. */
+  image?: string;
+  /** Event date (when the situation started), ISO string; empty when unknown. */
+  startedAt?: string;
   layerChips: CrisisLayerChipData[];
   perceptions: PerceptionRead[];
   actors: ActorModel[];
@@ -1763,6 +1767,8 @@ export interface CrisisLike {
   rfsAverage: number;
   credibilityScore: number; // 0..1
   grayZone: boolean;
+  imageUrl: string;
+  startedAt: string;
 }
 
 /** Maps a 0–10 backend severity onto the four RiskPill levels. */
@@ -1805,6 +1811,8 @@ export function crisisFromLive(live: CrisisLike, _index: number): CrisisModel {
     summaryText: '',
     cascadeNote: '',
     region: live.region || '',
+    image: live.imageUrl || '',
+    startedAt: live.startedAt || '',
     layerChips: [],
     perceptions: [],
     actors: [],

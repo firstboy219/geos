@@ -36,6 +36,8 @@ class Crisis(Base):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Representative image taken from the first member article (Layer 2 / Home-3).
+    image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     region: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sub_region: Mapped[str | None] = mapped_column(String(100), nullable=True)
     crisis_type: Mapped[str | None] = mapped_column(String(50), nullable=True)

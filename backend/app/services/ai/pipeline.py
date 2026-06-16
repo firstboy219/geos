@@ -68,6 +68,16 @@ async def run_summarize_news(max_articles: int = 2000) -> dict:
         return await summarize_news(db, max_articles=max_articles)
 
 
+async def run_resummarize_news(max_articles: int = 2000) -> dict:
+    """Home-1a recovery (non-AI) — re-extract intisari/quotes for id articles
+    whose summary is still English (summarized before translation). Triggered
+    manually by the lead (NOT wired into celery)."""
+    from app.services.ai.summarizer import resummarize_news
+
+    async with AsyncSessionLocal() as db:
+        return await resummarize_news(db, max_articles=max_articles)
+
+
 async def run_group_news(threshold: float | None = None, max_articles: int = 600) -> dict:
     """Layer 2 — cluster ungrouped news_articles into situations (crises)."""
     from app.services.ai.news_grouping import group_news
