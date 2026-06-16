@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -69,15 +70,18 @@ def _classify_region(title: str, texts: list[str]) -> str:
       * 'Internasional' — default.
     """
     t = (title or "").lower()
-    if any(kw in t for kw in _NASIONAL_KEYWORDS):
+    words = set(re.findall(r"[a-z]+", t))  # word-boundary (avoid 'bali' in 'kembali')
+    nas_single = {kw for kw in _NASIONAL_KEYWORDS if " " not in kw}
+    reg_single = {kw for kw in _REGIONAL_KEYWORDS if " " not in kw}
+    if words & nas_single:
         return REGION_NASIONAL
-    if any(kw in t for kw in _REGIONAL_KEYWORDS):
+    if (words & reg_single) or any(kw in t for kw in _REGIONAL_KEYWORDS if " " in kw):
         return REGION_REGIONAL
-    # Body fallback: only call Nasional when Indonesia signals are dense.
+    # Body fallback: only strong, unambiguous Indonesia tokens (no substrings).
     blob = " ".join(x.lower() for x in texts if x)
-    nas = sum(blob.count(kw) for kw in _NASIONAL_KEYWORDS)
+    nas = sum(blob.count(s) for s in ("indonesia", "jakarta", "prabowo", "jokowi", "natuna", "rupiah", "ihsg"))
     reg = sum(1 for kw in _REGIONAL_KEYWORDS if kw in blob)
-    if nas >= 3 and nas > reg:
+    if nas >= 2 and nas > reg:
         return REGION_NASIONAL
     if reg >= 1:
         return REGION_REGIONAL
