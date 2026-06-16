@@ -43,8 +43,10 @@ _EMBED_CONCURRENCY = 4
 # classifier tags EVERY Indonesian-outlet article 'indonesia' (incl. cooking,
 # sport, lifestyle), so it must instead pass the impact-keyword gate. Low-impact
 # items still appear in the raw home feed — they just never form a situation.
+# NOTE: 'internasional' is NOT here — it's the classifier's DEFAULT bucket, so it
+# also holds gossip/accidents/celebrity news. It must pass the impact-keyword gate.
 _ALWAYS_WORTHY = frozenset({
-    "politik", "keamanan", "ekonomi", "energi", "internasional", "teknologi",
+    "politik", "keamanan", "ekonomi", "energi", "teknologi",
 })
 # Word-boundary matched (avoids substrings like 'war' in 'warga').
 _IMPACT_WORDS = frozenset({
@@ -70,6 +72,8 @@ SITUATION_WORTHY_CATEGORIES = _ALWAYS_WORTHY
 
 
 def _is_worthy(a) -> bool:
+    if (a.url or "").startswith("trend://"):
+        return False  # Google Trends search-trends are not news situations
     if (a.category or "") in _ALWAYS_WORTHY:
         return True
     blob = f"{a.title} {a.content_summary or ''}".lower()
