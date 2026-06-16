@@ -32,6 +32,22 @@ _ATTR_VERBS = (
 _NAME = r"[A-Z][\w.\-]+(?:\s+[A-Z][\w.\-]+){0,3}"
 
 _WORD = re.compile(r"[A-Za-zÀ-ɏ]+")
+_TAG = re.compile(r"<[^>]+>")
+_WS = re.compile(r"\s+")
+
+
+def clean_html(text: str | None) -> str:
+    """Strip HTML (incl. entity-encoded tags like &lt;p&gt;) + decode entities."""
+    if not text:
+        return ""
+    t = text.replace("&lt;", "<").replace("&gt;", ">")
+    t = _TAG.sub(" ", t)  # strip real + entity-revealed tags
+    t = (t.replace("&amp;", "&").replace("&quot;", '"').replace("&#39;", "'")
+         .replace("&#039;", "'").replace("&nbsp;", " ").replace("&hellip;", "…")
+         .replace("&rsquo;", "'").replace("&lsquo;", "'")
+         .replace("&ldquo;", '"').replace("&rdquo;", '"').replace("&#8217;", "'"))
+    t = _TAG.sub(" ", t)  # safety pass
+    return _WS.sub(" ", t).strip()
 
 
 def _sentences(text: str) -> list[str]:
@@ -40,7 +56,7 @@ def _sentences(text: str) -> list[str]:
 
 
 def extract_points(text: str | None, *, max_points: int = 3, fallback: str = "") -> list[str]:
-    text = (text or "").strip()
+    text = clean_html(text)
     if not text:
         return [fallback.strip()][:1] if fallback.strip() else []
     sents = _sentences(text)
@@ -73,7 +89,7 @@ def extract_points(text: str | None, *, max_points: int = 3, fallback: str = "")
 
 
 def extract_quotes(text: str | None, *, max_quotes: int = 3) -> list[dict]:
-    text = text or ""
+    text = clean_html(text)
     out: list[dict] = []
     seen: set[str] = set()
     for m in re.finditer(r'["“«]([^"”»]{25,400})["”»]', text):
