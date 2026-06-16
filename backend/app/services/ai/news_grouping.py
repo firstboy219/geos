@@ -59,28 +59,28 @@ _REGIONAL_KEYWORDS = (
 )
 
 
-def _classify_region(texts: list[str], langs: list[str]) -> str:
-    """Classify a situation's region from its member articles.
+def _classify_region(title: str, texts: list[str]) -> str:
+    """Classify a situation's region — TITLE-first (the situation's representative
+    headline), since after translation every article is 'id' so language is no
+    signal and a single 'Indonesia' mention in a big cluster must not flip it.
 
-    Heuristic, deterministic, non-AI:
-      * 'Nasional'      — Indonesia-related (id-language dominant, or Indonesia
-                          keyword hits).
-      * 'Regional'      — Asia/ASEAN keyword hits.
-      * 'Internasional' — everything else (the default).
+      * 'Nasional'      — title clearly about Indonesia (or strong body density).
+      * 'Regional'      — title/body about Asia-Pacific neighbours.
+      * 'Internasional' — default.
     """
-    blob = " ".join(t.lower() for t in texts if t)
-    id_langs = sum(1 for lang in langs if (lang or "").lower().startswith("id"))
-    nas_hits = sum(1 for kw in _NASIONAL_KEYWORDS if kw in blob)
-    reg_hits = sum(1 for kw in _REGIONAL_KEYWORDS if kw in blob)
-
-    # Indonesia-related dominates when keyword present, or the cluster is mostly
-    # Indonesian-language with at least one national signal.
-    if nas_hits >= 1 and (nas_hits >= reg_hits or id_langs > len(langs) / 2):
+    t = (title or "").lower()
+    if any(kw in t for kw in _NASIONAL_KEYWORDS):
         return REGION_NASIONAL
-    if reg_hits >= 1:
+    if any(kw in t for kw in _REGIONAL_KEYWORDS):
         return REGION_REGIONAL
-    if id_langs > len(langs) / 2 and nas_hits >= 1:
+    # Body fallback: only call Nasional when Indonesia signals are dense.
+    blob = " ".join(x.lower() for x in texts if x)
+    nas = sum(blob.count(kw) for kw in _NASIONAL_KEYWORDS)
+    reg = sum(1 for kw in _REGIONAL_KEYWORDS if kw in blob)
+    if nas >= 3 and nas > reg:
         return REGION_NASIONAL
+    if reg >= 1:
+        return REGION_REGIONAL
     return REGION_INTERNASIONAL
 
 
@@ -413,7 +413,7 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
                             processed_at=datetime.now(timezone.utc))
                 )
         elif cl["count"] >= MIN_CLUSTER_SIZE:
-            region = _classify_region(cl.get("texts", []), cl.get("langs", []))
+            region = _classify_region(cl.get("seed_title") or "", cl.get("texts", []))
             crisis = Crisis(
                 title=(cl["seed_title"] or "Situasi")[:255],
                 description=cl["seed_summary"],
