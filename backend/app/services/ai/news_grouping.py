@@ -38,13 +38,45 @@ MAX_PER_RUN = 600
 _EMBED_CONCURRENCY = 4
 
 # ── Situation-worthiness filter (Situasi-1) ───────────────────
-# Only articles with global/national geopolitical or economic impact may form a
-# situation. Low-impact categories (olahraga, hiburan, kesehatan) are excluded —
-# they still appear in the raw home feed, they just never seed/join a situation.
-SITUATION_WORTHY_CATEGORIES = frozenset({
-    "politik", "keamanan", "ekonomi", "energi",
-    "internasional", "indonesia", "teknologi",
+# A situation = news with real global/national geopolitical or economic impact.
+# Topic categories below are always worthy. Note 'indonesia' is NOT here: the
+# classifier tags EVERY Indonesian-outlet article 'indonesia' (incl. cooking,
+# sport, lifestyle), so it must instead pass the impact-keyword gate. Low-impact
+# items still appear in the raw home feed — they just never form a situation.
+_ALWAYS_WORTHY = frozenset({
+    "politik", "keamanan", "ekonomi", "energi", "internasional", "teknologi",
 })
+# Word-boundary matched (avoids substrings like 'war' in 'warga').
+_IMPACT_WORDS = frozenset({
+    "perang", "militer", "military", "troops", "pasukan", "sanksi", "sanction",
+    "embargo", "tarif", "tariff", "nuklir", "nuclear", "rudal", "missile",
+    "pemilu", "election", "pilpres", "presiden", "president", "parlemen",
+    "parliament", "diplomat", "diplomasi", "perjanjian", "treaty", "konflik",
+    "conflict", "krisis", "crisis", "invasi", "invasion", "serangan", "attack",
+    "demo", "protes", "protest", "kudeta", "coup", "ekonomi", "economy",
+    "inflasi", "inflation", "resesi", "recession", "rupiah", "ihsg",
+    "geopolitik", "geopolitical", "keamanan", "security", "teror", "terror",
+    "terrorism", "sengketa", "dispute", "perbatasan", "border", "ktt", "summit",
+    "gencatan", "ceasefire", "pengungsi", "refugee", "opec", "nikel", "ekspor",
+    "impor", "export", "import", "perdagangan", "trade", "menteri", "minister",
+    "kebijakan", "nato", "asean", "sanctions", "tariffs",
+})
+_IMPACT_PHRASES = (
+    "suku bunga", "harga minyak", "bank sentral", "trade war", "oil price",
+    "united nations", "unjuk rasa", "laut china selatan", "south china sea",
+)
+# kept for any external import compatibility
+SITUATION_WORTHY_CATEGORIES = _ALWAYS_WORTHY
+
+
+def _is_worthy(a) -> bool:
+    if (a.category or "") in _ALWAYS_WORTHY:
+        return True
+    blob = f"{a.title} {a.content_summary or ''}".lower()
+    words = set(re.findall(r"[a-z]+", blob))
+    if words & _IMPACT_WORDS:
+        return True
+    return any(p in blob for p in _IMPACT_PHRASES)
 
 # ── Title de-duplication (Situasi-2) ──────────────────────────
 # Strip a trailing " - Outlet" / " | Outlet" source suffix (Google News style).
@@ -416,7 +448,7 @@ async def group_news(db, *, threshold: float | None = None, max_articles: int = 
     skipped_category = 0
     skipped_duplicate = 0
     for a in arts:
-        if a.category not in SITUATION_WORTHY_CATEGORIES:
+        if not _is_worthy(a):
             skipped_category += 1
             continue
         norm = _normalize_title(a.title)
