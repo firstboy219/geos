@@ -21,18 +21,21 @@ DEFAULT_NEWS_SOURCES: list[dict] = [
     {"name": "AP News", "url": "https://news.google.com/rss/search?q=when:1d%20site:apnews.com&hl=en-US&gl=US&ceid=US:en", "type": "rss", "credibility": 0.8, "lang": "en", "enabled": True},
     {"name": "Google News (geopolitik dunia)", "url": "https://news.google.com/rss/search?q=geopolitical%20military%20sanctions%20naval%20territorial%20dispute&hl=en-US&gl=US&ceid=US:en", "type": "rss", "credibility": 0.65, "lang": "en", "enabled": True},
     # ── Indonesia / local ──
+    # Direct outlet RSS mostly block/timeout the datacenter IP (CNN ID 403,
+    # Tempo timeout, Kompas/Detik conn-closed), so Indonesian outlets are sourced
+    # via Google News RSS (reliably reachable) using site: queries — outlet names
+    # preserved. Antara works directly so it stays direct.
     {"name": "Antara", "url": "https://www.antaranews.com/rss/terkini.xml", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
-    {"name": "CNBC Indonesia", "url": "https://www.cnbcindonesia.com/rss", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
-    {"name": "Tempo Nasional", "url": "https://rss.tempo.co/nasional", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
-    {"name": "Tempo", "url": "https://rss.tempo.co/", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
-    {"name": "Kompas", "url": "https://www.kompas.com/rss", "type": "rss", "credibility": 0.85, "lang": "id", "enabled": False},  # connection blocked from datacenter IP
-    {"name": "CNN Indonesia", "url": "https://www.cnnindonesia.com/rss", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
-    {"name": "Liputan6", "url": "https://feed.liputan6.com/rss", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
-    {"name": "Kumparan", "url": "https://kumparan.com/feed", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
-    {"name": "Tribun", "url": "https://www.tribunnews.com/rss", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
-    {"name": "Republika", "url": "https://www.republika.co.id/rss", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
-    # NOTE: Detik was previously blocked from the datacenter IP — included anyway; may fail to fetch.
-    {"name": "Detik", "url": "https://rss.detik.com/index.php/detikcom", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": False},  # blocked from datacenter IP
+    {"name": "Indonesia", "url": "https://news.google.com/rss/headlines/section/topic/NATION?hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
+    {"name": "Kompas", "url": "https://news.google.com/rss/search?q=site:kompas.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.85, "lang": "id", "enabled": True},
+    {"name": "Detik", "url": "https://news.google.com/rss/search?q=site:detik.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
+    {"name": "Tribun", "url": "https://news.google.com/rss/search?q=site:tribunnews.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
+    {"name": "CNN Indonesia", "url": "https://news.google.com/rss/search?q=site:cnnindonesia.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "Liputan6", "url": "https://news.google.com/rss/search?q=site:liputan6.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
+    {"name": "Tempo", "url": "https://news.google.com/rss/search?q=site:tempo.co%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "CNBC Indonesia", "url": "https://news.google.com/rss/search?q=site:cnbcindonesia.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.8, "lang": "id", "enabled": True},
+    {"name": "Kumparan", "url": "https://news.google.com/rss/search?q=site:kumparan.com%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.7, "lang": "id", "enabled": True},
+    {"name": "Republika", "url": "https://news.google.com/rss/search?q=site:republika.co.id%20when:2d&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.75, "lang": "id", "enabled": True},
     {"name": "Google News (Indonesia)", "url": "https://news.google.com/rss/search?q=geopolitik%20OR%20ekonomi%20OR%20militer%20OR%20Natuna&hl=id&gl=ID&ceid=ID:id", "type": "rss", "credibility": 0.65, "lang": "id", "enabled": True},
     # ── Trending / social / video ──
     {"name": "Google Trends ID", "url": "https://trends.google.com/trending/rss?geo=ID", "type": "trends", "credibility": 0.45, "lang": "id", "enabled": True},
